@@ -1,0 +1,250 @@
+.experience { position: relative; overflow: hidden; }
+.bgGlow { width: 600px; height: 600px; bottom: 0; right: -100px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 48px;
+  align-items: start;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 48px;
+}
+
+.timelineLine {
+  position: absolute;
+  left: 20px;
+  top: 24px;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary), transparent);
+  border-radius: 100px;
+}
+
+.timelineItem {
+  position: relative;
+  margin-bottom: 32px;
+}
+.timelineItem:last-child { margin-bottom: 0; }
+
+.timelineDot {
+  position: absolute;
+  left: -38px;
+  top: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  z-index: 1;
+  border: 2px solid var(--bg-primary);
+}
+
+.card { padding: 24px; }
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.role {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.company {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.period {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.typeBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--text-accent);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+}
+
+.points { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+.point {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.bullet {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: calc(var(--nav-height) + 24px);
+}
+
+.sidebarTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.eduCard {
+  padding: 22px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(13, 24, 41, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.eduCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.eduCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.eduCard:hover::before { opacity: 1; }
+
+.eduCard:hover .eduIcon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+.eduIcon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.eduContent {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.degree {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+  color: #f8fafc;
+}
+
+.school {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.eduMeta { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  align-items: flex-start;
+}
+
+.grade { 
+  font-size: 0.75rem; 
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  display: inline-block;
+}
+
+/* Achievements */
+.achieveCard { padding: 24px; }
+
+.achieve {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+.achieve:last-child { border-bottom: none; }
+
+.achieveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  flex-shrink: 0;
+  background: var(--accent-primary);
+}
+
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+}
+
+@media (max-width: 600px) {
+  .timeline { padding-left: 36px; }
+  .timelineDot { width: 28px; height: 28px; left: -32px; font-size: 0.8rem; }
+  .cardHeader { flex-direction: column; }
+  .meta { align-items: flex-start; }
+}

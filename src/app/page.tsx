@@ -1,65 +1,71 @@
-import Image from "next/image";
+"use client";
+import styles from "./components/Hero.module.css"; // Reuse some beautiful hero styles for the landing page
 
-export default function Home() {
+export default function SaaSLandingPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <nav className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 0', position: 'relative', zIndex: 10 }}>
+        <div style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
+          Portfolio<span className="gradient-text">OS</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <a href="/admin/login" className="btn btn-outline" style={{ padding: '0.6rem 1.25rem' }}>
+            Login
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+          <a href="/admin/login" className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
+            Get Started
           </a>
         </div>
+      </nav>
+      
+      <main>
+        <section className={styles.hero} style={{ minHeight: '85vh', paddingTop: '4rem' }}>
+          <div className={styles.bgMesh} />
+          <div className={styles.gridBg} />
+          <div className={`bg-glow bg-glow-purple ${styles.glow1}`} style={{ opacity: 0.8 }} />
+          <div className={`bg-glow bg-glow-cyan ${styles.glow2}`} style={{ opacity: 0.6 }} />
+          
+          <div className={`container ${styles.heroContent}`} style={{ alignItems: 'center', textAlign: 'center' }}>
+            <div className={styles.greeting} style={{ marginBottom: '1.5rem', alignSelf: 'center' }}>
+              <span className={styles.greetingDot} style={{ background: 'var(--accent-secondary)', boxShadow: '0 0 10px var(--accent-secondary)' }} />
+              The Ultimate Developer Portfolio Builder
+            </div>
+            
+            <h1 className={styles.name} style={{ fontSize: 'clamp(2.5rem, 6vw, 5rem)', lineHeight: 1.1, maxWidth: '900px', margin: '0 auto 1.5rem' }}>
+              Stand Out With A <br/><span className="gradient-text-hero">Professional Portfolio</span>
+            </h1>
+            
+            <p className={styles.description} style={{ maxWidth: '600px', margin: '0 auto 2.5rem', fontSize: '1.125rem' }}>
+              Create a stunning, AI-powered portfolio in minutes. Manage your projects, skills, and timeline effortlessly with our powerful CMS, and get your own unique `domain.com/username` link.
+            </p>
+            
+            <div className={styles.ctaRow} style={{ justifyContent: 'center' }}>
+              <a href="/admin/login" className="btn btn-primary" style={{ padding: '0.875rem 2rem', fontSize: '1.125rem' }}>
+                Create Your Free Portfolio
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+            
+            <div style={{ marginTop: '4rem', display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div className="glass-card" style={{ padding: '1.5rem 2rem', textAlign: 'center', minWidth: '220px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚡</div>
+                <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Lightning Fast</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Server-side rendered next.js app</p>
+              </div>
+              <div className="glass-card" style={{ padding: '1.5rem 2rem', textAlign: 'center', minWidth: '220px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎨</div>
+                <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Beautiful Design</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Premium dark-mode glassmorphism</p>
+              </div>
+              <div className="glass-card" style={{ padding: '1.5rem 2rem', textAlign: 'center', minWidth: '220px' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🤖</div>
+                <h3 style={{ fontSize: '1.125rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>AI Integrated</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Built-in Ollama LLM assistant</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
-    </div>
+    </>
   );
 }

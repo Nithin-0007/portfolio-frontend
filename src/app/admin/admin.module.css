@@ -1,0 +1,22 @@
+.adminShell {
+  display: flex;
+  min-height: 100vh;
+  background: #060d1a;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.adminMain {
+  flex: 1;
+  overflow: auto;
+  margin-left: 260px;
+}
+
+.adminContent {
+  padding: 32px;
+  max-width: 1400px;
+}
+
+@media (max-width: 900px) {
+  .adminMain { margin-left: 0; }
+}
