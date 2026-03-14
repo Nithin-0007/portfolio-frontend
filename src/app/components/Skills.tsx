@@ -30,18 +30,18 @@ export default function Skills({ data }: { data: any }) {
   let displayCategories = initialCategories;
   let displayProficiencies = initialProficiencies;
 
-  if (data) {
-    displayProficiencies = data.skills.map((s: any) => ({ label: s.label, value: s.value }));
-    displayCategories = data.categories.map((cat: any) => ({
-      icon: cat.icon || "🛠️",
-      title: cat.title,
-      color: cat.color || "#7c3aed",
-      skills: (data.skills as any[]).filter(s => s.category === cat.title).map(s => s.label)
-    }));
-    // If no skills found for a category, we might still want to show the initial one if it was hardcoded? 
-    // Actually, user said connect to backend, so we should trust backend data.
-    if (displayCategories.length === 0) displayCategories = initialCategories;
-    if (displayProficiencies.length === 0) displayProficiencies = initialProficiencies;
+  if (Array.isArray(data) && data.length > 0) {
+    displayProficiencies = data.map((s: any) => ({ label: s.label, value: s.value }));
+    
+    // Group skills by category
+    const grouped = data.reduce((acc: any, s: any) => {
+      const cat = s.category || "Other";
+      if (!acc[cat]) acc[cat] = { title: cat, icon: s.icon || "🛠️", color: "#7c3aed", skills: [] };
+      acc[cat].skills.push(s.label);
+      return acc;
+    }, {});
+    
+    displayCategories = Object.values(grouped);
   }
 
 

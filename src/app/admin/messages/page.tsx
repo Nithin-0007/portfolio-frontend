@@ -1,30 +1,77 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
-interface Msg { id: string; name: string; email: string; subject: string; message: string; read: boolean; replied: boolean; createdAt: string; }
+interface Msg { id: string; name: string; email: string; subject: string; message: string; read: boolean; createdAt: string; }
+
+const GET_MESSAGES = `
+  query GetMessages($username: String!, $page: Int, $limit: Int, $search: String, $read: Boolean, $sortBy: String, $sortOrder: String) {
+    getMessages(username: $username, page: $page, limit: $limit, search: $search, read: $read, sortBy: $sortBy, sortOrder: $sortOrder) {
+      items { id name email subject message read createdAt }
+      pageInfo { total page limit totalPages hasNext hasPrev }
+    }
+  }
+`;
+
+const MARK_READ = `
+  mutation MarkMessageRead($id: ID!) {
+    markMessageRead(id: $id) { id read }
+  }
+`;
+
+const DELETE_MESSAGE = `
+  mutation DeleteMessage($id: ID!) {
+    deleteMessage(id: $id)
+  }
+`;
 
 export default function MessagesAdmin() {
+  const { data: session } = useSession();
+  const username = (session?.user as any)?.username;
+
   const [messages, setMessages] = useState<Msg[]>([]);
   const [selected, setSelected] = useState<Msg | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterRead, setFilterRead] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<any>(null);
+  const limit = 15;
 
   const fetch_ = useCallback(async () => {
-    const res = await fetch("/api/messages");
-    const data = await res.json();
-    setMessages(data.data || []);
-  }, []);
+    if (!username) return;
+    try {
+      const readFilter = filterRead === "" ? undefined : filterRead === "true";
+      const data = await graphqlClient.query(GET_MESSAGES, { username, page, limit, search: search || undefined, read: readFilter, sortBy: "createdAt", sortOrder: "desc" });
+      setMessages(data?.getMessages?.items || []);
+      setPageInfo(data?.getMessages?.pageInfo || null);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  }, [username, page, search, filterRead]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => { setPage(1); }, [search, filterRead]);
 
   const markRead = async (id: string) => {
-    await fetch("/api/messages", { method:"PATCH", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ id, read: true }) });
-    await fetch_();
+    try {
+      await graphqlClient.query(MARK_READ, { id });
+      await fetch_();
+    } catch (error) {
+      console.error("Error marking read:", error);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this message?")) return;
-    await fetch(`/api/messages?id=${id}`, { method:"DELETE" });
-    setSelected(null); await fetch_();
+    try {
+      await graphqlClient.query(DELETE_MESSAGE, { id });
+      setSelected(null);
+      await fetch_();
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
   };
 
   const openMsg = async (m: Msg) => {
@@ -35,7 +82,17 @@ export default function MessagesAdmin() {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}><h1 className={styles.pageTitle}>Messages</h1><p className={styles.pageSubtitle}>Contact form submissions from your portfolio</p></div>
-      <div className={styles.tableHeader}><span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{messages.filter(m=>!m.read).length} unread of {messages.length}</span></div>
+      <div className={styles.tableHeader}>
+        <div style={{display:"flex",gap:8,flex:1,flexWrap:"wrap"}}>
+          <input className={styles.input} style={{maxWidth:220}} placeholder="Search messages..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <select className={styles.select} style={{maxWidth:140}} value={filterRead} onChange={e=>setFilterRead(e.target.value)}>
+            <option value="">All Messages</option>
+            <option value="false">Unread Only</option>
+            <option value="true">Read Only</option>
+          </select>
+        </div>
+        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{messages.filter(m=>!m.read).length} unread of {pageInfo?.total ?? messages.length}</span>
+      </div>
       <table className={styles.table}>
         <thead><tr><th>From</th><th>Subject</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
@@ -51,6 +108,13 @@ export default function MessagesAdmin() {
           {messages.length===0&&<tr><td colSpan={5}><div className={styles.emptyState}><div className={styles.emptyIcon}>📬</div><div className={styles.emptyText}>No messages yet.</div></div></td></tr>}
         </tbody>
       </table>
+      {pageInfo && pageInfo.totalPages > 1 && (
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:8,marginTop:16}}>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasPrev} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+          <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>Page {pageInfo.page} of {pageInfo.totalPages}</span>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasNext} onClick={()=>setPage(p=>p+1)}>Next →</button>
+        </div>
+      )}
 
       {selected&&(
         <div className={styles.modal} onClick={e=>e.target===e.currentTarget&&setSelected(null)}>

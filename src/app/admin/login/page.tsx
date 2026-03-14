@@ -49,7 +49,11 @@ export default function AdminLogin() {
         body: JSON.stringify({ name, username, identifier, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to register");
+      if (!res.ok) {
+        setError(data.error || "Failed to register");
+        setLoading(false);
+        return;
+      }
 
       // Auto-login after signup
       const result = await signIn("credentials", {
@@ -112,11 +116,16 @@ export default function AdminLogin() {
               <input
                 type="text"
                 className={styles.input}
-                placeholder="nithish_kumar"
+                placeholder="your-username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s+/g, "_"))}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                 required
+                pattern="[a-z0-9-]+"
+                title="Only lowercase letters, numbers, and hyphens"
               />
+              <small style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "-4px" }}>
+                Your portfolio: domain.com/{username || "your-username"}
+              </small>
             </div>
           )}
 

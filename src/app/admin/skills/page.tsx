@@ -1,96 +1,101 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
-interface Skill {
-  id: string;
-  label: string;
-  value: number;
-  category: string;
-  icon?: string;
-  order: number;
-}
+interface Skill { id: string; label: string; value: number; category: string; icon?: string; order: number; }
+interface Category { id: string; title: string; icon: string; color: string; order: number; }
 
-interface Category {
-  id: string;
-  title: string;
-  icon: string;
-  color: string;
-  order: number;
-}
+const GET_SKILLS_AND_CATS = `
+  query GetSkillsAndCats($username: String!, $search: String, $category: String, $sortBy: String, $sortOrder: String, $page: Int, $limit: Int) {
+    getSkills(username: $username, search: $search, category: $category, sortBy: $sortBy, sortOrder: $sortOrder, page: $page, limit: $limit) {
+      items { id label value category icon order }
+      pageInfo { total page limit totalPages hasNext hasPrev }
+    }
+  }
+`;
+
+const UPSERT_SKILL = `
+  mutation UpsertSkill($userId: ID!, $input: SkillInput!) {
+    upsertSkill(userId: $userId, input: $input) { id }
+  }
+`;
+
+const DELETE_SKILL = `
+  mutation DeleteSkill($id: ID!) {
+    deleteSkill(id: $id)
+  }
+`;
 
 export default function SkillsAdmin() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [sortBy, setSortBy] = useState("order");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<any>(null);
+  const limit = 20;
 
-  // Modals
-  const [catModal, setCatModal] = useState(false);
   const [skillModal, setSkillModal] = useState(false);
-  const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
 
-  // Forms
-  const emptyCat: Omit<Category, "id"> = { title: "", icon: "🛠️", color: "#7c3aed", order: 0 };
-  const emptySkill: Omit<Skill, "id"> = { label: "", value: 80, category: "", icon: "", order: 0 };
-  
-  const [catForm, setCatForm] = useState(emptyCat);
+  const emptySkill: Omit<Skill, "id"> = { label: "", value: 80, category: "Frontend", icon: "", order: 0 };
   const [skillForm, setSkillForm] = useState(emptySkill);
 
   const fetch_ = useCallback(async () => {
+    if (!username) return;
     setLoading(true);
-    const res = await fetch("/api/skills");
-    const data = await res.json();
-    if (data.success) {
-      setSkills(data.data.skills || []);
-      setCategories(data.data.categories || []);
-      if (data.data.categories?.length > 0 && !skillForm.category) {
-        setSkillForm(prev => ({ ...prev, category: data.data.categories[0].title }));
-      }
+    try {
+      const data = await graphqlClient.query(GET_SKILLS_AND_CATS, { username, search: search || undefined, category: filterCategory || undefined, sortBy, sortOrder, page, limit });
+      const items = data?.getSkills?.items || [];
+      setSkills(items);
+      setPageInfo(data?.getSkills?.pageInfo || null);
+      const dynamicCats = Array.from(new Set(items.map((s: any) => s.category)))
+        .map(c => ({ id: c as string, title: c as string, icon: "🛠️", color: "#7c3aed", order: 0 }));
+      setCategories(dynamicCats);
+    } catch (error) {
+      console.error("Error fetching skills:", error);
     }
     setLoading(false);
-  }, []);
+  }, [username, search, filterCategory, sortBy, sortOrder, page]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => { setPage(1); }, [search, filterCategory, sortBy, sortOrder]);
 
-  // CATEGORY HANDLERS
-  const openCatModal = (cat?: Category) => {
-    setEditingCat(cat || null);
-    setCatForm(cat ? { ...cat } : emptyCat);
-    setCatModal(true);
-  };
-
-  const saveCategory = async () => {
-    const payload = editingCat ? { ...catForm, id: editingCat.id, type: "category" } : { ...catForm, type: "category" };
-    await fetch("/api/skills", { method: editingCat ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    setCatModal(false);
-    await fetch_();
-  };
-
-  const deleteCategory = async (id: string) => {
-    if (!confirm("Are you sure? This will not delete the skills, but they will be orphaned.")) return;
-    await fetch(`/api/skills?id=${id}&type=category`, { method: "DELETE" });
-    await fetch_();
-  };
-
-  // SKILL HANDLERS
   const openSkillModal = (skill?: Skill) => {
     setEditingSkill(skill?.id ? skill : null);
-    setSkillForm(skill ? { ...skill } : { ...emptySkill, category: categories[0]?.title || "" });
+    setSkillForm(skill ? { ...skill } : { ...emptySkill });
     setSkillModal(true);
   };
 
   const saveSkill = async () => {
-    const payload = editingSkill ? { ...skillForm, id: editingSkill.id, type: "skill" } : { ...skillForm, type: "skill" };
-    await fetch("/api/skills", { method: editingSkill ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    setSkillModal(false);
-    await fetch_();
+    if (!userId) return;
+    try {
+      const { ...input } = skillForm;
+      await graphqlClient.query(UPSERT_SKILL, { userId, input });
+      setSkillModal(false);
+      await fetch_();
+    } catch (error) {
+      console.error("Error saving skill:", error);
+    }
   };
 
-  const deleteSkill = async (id: string, isProficiency: boolean) => {
-    if (!confirm(`Remove this ${isProficiency ? 'Proficiency Level' : 'Tech Stack Skill'}?`)) return;
-    await fetch(`/api/skills?id=${id}&type=skill`, { method: "DELETE" });
-    await fetch_();
+  const deleteSkill = async (id: string) => {
+    if (!confirm(`Remove this skill?`)) return;
+    try {
+      await graphqlClient.query(DELETE_SKILL, { id });
+      await fetch_();
+    } catch (error) {
+      console.error("Error deleting skill:", error);
+    }
   };
 
   if (loading) return <div className={styles.page}><p>Loading...</p></div>;
@@ -123,44 +128,12 @@ export default function SkillsAdmin() {
                   <td>
                     <div className={styles.btnGroup}>
                       <button className={styles.btnEdit} onClick={() => openSkillModal(p)}>Edit</button>
-                      <button className={styles.btnDanger} onClick={() => deleteSkill(p.id, true)}>Del</button>
+                      <button className={styles.btnDanger} onClick={() => deleteSkill(p.id)}>Del</button>
                     </div>
                   </td>
                 </tr>
               ))}
               {proficiencySkills.length === 0 && <tr><td colSpan={3} className={styles.emptyState}>No proficiencies added.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-
-        {/* CATEGORIES */}
-        <div className={styles.card}>
-          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16}}>
-            <h2 className={styles.cardTitle} style={{margin:0}}>Tech Stack Categories</h2>
-            <button className={styles.btnSecondary} style={{padding:"6px 12px"}} onClick={() => openCatModal()}>+ Add Category</button>
-          </div>
-          <table className={styles.table}>
-            <thead><tr><th>Icon & Title</th><th>Color</th><th>Order</th><th>Actions</th></tr></thead>
-            <tbody>
-              {categories.filter(c => c.title !== "Proficiency").map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <div style={{display:'flex', alignItems:'center', gap:8}}>
-                      <span style={{background:`${c.color}22`, padding:4, borderRadius:4}}>{c.icon}</span>
-                      <span style={{fontWeight:600}}>{c.title}</span>
-                    </div>
-                  </td>
-                  <td><div style={{width:16,height:16,borderRadius:'50%',background:c.color}} /></td>
-                  <td>{c.order}</td>
-                  <td>
-                    <div className={styles.btnGroup}>
-                      <button className={styles.btnEdit} onClick={() => openCatModal(c)}>Edit</button>
-                      <button className={styles.btnDanger} onClick={() => deleteCategory(c.id)}>Del</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {categories.filter(c => c.title !== "Proficiency").length === 0 && <tr><td colSpan={4} className={styles.emptyState}>No categories added.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -182,7 +155,7 @@ export default function SkillsAdmin() {
                   <td>
                     <div className={styles.btnGroup}>
                       <button className={styles.btnEdit} onClick={() => openSkillModal(s)}>Edit</button>
-                      <button className={styles.btnDanger} onClick={() => deleteSkill(s.id, false)}>Del</button>
+                      <button className={styles.btnDanger} onClick={() => deleteSkill(s.id)}>Del</button>
                     </div>
                   </td>
                 </tr>
@@ -194,34 +167,6 @@ export default function SkillsAdmin() {
 
       </div>
 
-      {/* CATEGORY MODAL */}
-      {catModal && (
-        <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setCatModal(false)}>
-          <div className={styles.modalCard}>
-            <h3 className={styles.modalTitle}>{editingCat ? "Edit Category" : "Add Category"}</h3>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Title (e.g. Frontend)</label>
-              <input className={styles.input} value={catForm.title} onChange={e=>setCatForm({...catForm,title:e.target.value})} />
-            </div>
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Icon (emoji)</label>
-                <input className={styles.input} value={catForm.icon} onChange={e=>setCatForm({...catForm,icon:e.target.value})} />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Theme Color</label>
-                <input type="color" className={styles.input} value={catForm.color} onChange={e=>setCatForm({...catForm,color:e.target.value})} style={{padding:4,height:42}} />
-              </div>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Display Order</label>
-              <input className={styles.input} type="number" value={catForm.order} onChange={e=>setCatForm({...catForm,order:parseInt(e.target.value)||0})} />
-            </div>
-            <div className={styles.formActions} style={{marginTop:16}}><button className={styles.btnSecondary} onClick={()=>setCatModal(false)}>Cancel</button><button className={styles.btnPrimary} onClick={saveCategory}>Save</button></div>
-          </div>
-        </div>
-      )}
-
       {/* SKILL MODAL */}
       {skillModal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setSkillModal(false)}>
@@ -232,14 +177,16 @@ export default function SkillsAdmin() {
               <input className={styles.input} value={skillForm.label} onChange={e=>setSkillForm({...skillForm,label:e.target.value})} />
             </div>
             
-            {skillForm.category !== "Proficiency" && (
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Category</label>
-                <select className={styles.select} value={skillForm.category} onChange={e=>setSkillForm({...skillForm,category:e.target.value})}>
-                  {categories.filter(c => c.title !== "Proficiency").map(c => <option key={c.title} value={c.title}>{c.title}</option>)}
-                </select>
-              </div>
-            )}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Category</label>
+              <select className={styles.select} value={skillForm.category} onChange={e=>setSkillForm({...skillForm,category:e.target.value})}>
+                <option value="Frontend">Frontend</option>
+                <option value="Backend">Backend</option>
+                <option value="AI/ML">AI/ML</option>
+                <option value="DevOps">DevOps</option>
+                <option value="Proficiency">Proficiency (Bar)</option>
+              </select>
+            </div>
 
             {skillForm.category === "Proficiency" && (
               <div className={styles.formGroup}>

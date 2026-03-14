@@ -4,19 +4,23 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
-  const isAdmin = req.auth?.user?.role === "ADMIN";
+  const userRole = req.auth?.user?.role;
   const isAdminRoute = nextUrl.pathname.startsWith("/admin");
   const isLoginPage = nextUrl.pathname === "/admin/login";
 
+  // Redirect to login if not logged in and trying to access admin
   if (isAdminRoute && !isLoginPage && !isLoggedIn) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
-  if (isAdminRoute && !isLoginPage && isLoggedIn && !isAdmin) {
+  // Allow both ADMIN and VIEWER to access admin panel
+  // ADMIN can manage all users, VIEWER can only manage their own content
+  if (isAdminRoute && !isLoginPage && isLoggedIn && !userRole) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (isLoginPage && isLoggedIn && isAdmin) {
+  // Redirect logged-in users away from login page
+  if (isLoginPage && isLoggedIn) {
     return NextResponse.redirect(new URL("/admin", req.url));
   }
 

@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
 interface Experience {
   id: string;
@@ -27,20 +29,60 @@ const empty: Omit<Experience, "id"> = {
 
 const TYPES = ["EXPERIENCE", "EDUCATION"];
 
+const GET_EXPERIENCES = `
+  query GetExperiences($username: String!, $page: Int, $limit: Int, $search: String, $type: String, $sortBy: String, $sortOrder: String) {
+    getExperiences(username: $username, page: $page, limit: $limit, search: $search, type: $type, sortBy: $sortBy, sortOrder: $sortOrder) {
+      items { id role company period type icon color points order }
+      pageInfo { total page limit totalPages hasNext hasPrev }
+    }
+  }
+`;
+
+const UPSERT_EXPERIENCE = `
+  mutation UpsertExperience($userId: ID!, $input: ExperienceInput!) {
+    upsertExperience(userId: $userId, input: $input) {
+      id
+    }
+  }
+`;
+
+const DELETE_EXPERIENCE = `
+  mutation DeleteExperience($id: ID!) {
+    deleteExperience(id: $id)
+  }
+`;
+
 export default function ExperienceAdmin() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [items, setItems] = useState<Experience[]>([]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Experience | null>(null);
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [sortBy, setSortBy] = useState("order");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<any>(null);
+  const limit = 10;
 
   const fetch_ = useCallback(async () => {
-    const res = await fetch("/api/experience");
-    const data = await res.json();
-    setItems(data.data || []);
-  }, []);
+    if (!username) return;
+    try {
+      const data = await graphqlClient.query(GET_EXPERIENCES, { username, page, limit, search: search || undefined, type: filterType || undefined, sortBy, sortOrder });
+      setItems(data?.getExperiences?.items || []);
+      setPageInfo(data?.getExperiences?.pageInfo || null);
+    } catch (error) {
+      console.error("Error fetching experience:", error);
+    }
+  }, [username, page, search, filterType, sortBy, sortOrder]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => { setPage(1); }, [search, filterType, sortBy, sortOrder]);
 
   const openModal = (exp?: Experience) => {
     setEditing(exp || null);
@@ -60,28 +102,31 @@ export default function ExperienceAdmin() {
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     setLoading(true);
-    const method = editing ? "PUT" : "POST";
-    const body = editing ? { ...form, id: editing.id } : form;
-    
-    // Filter out empy strings in points just in case
-    body.points = body.points.filter((p) => p.trim() !== "");
+    try {
+      const { ...input } = form;
+      // Filter out empty strings in points
+      input.points = input.points.filter((p) => p.trim() !== "");
 
-    await fetch("/api/experience", { 
-      method, 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify(body) 
-    });
-    
-    setModal(false);
-    await fetch_();
-    setLoading(false);
+      await graphqlClient.query(UPSERT_EXPERIENCE, { userId, input });
+      setModal(false);
+      await fetch_();
+    } catch (error) {
+      console.error("Error saving experience:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this experience record?")) return;
-    await fetch(`/api/experience?id=${id}`, { method: "DELETE" });
-    await fetch_();
+    try {
+      await graphqlClient.query(DELETE_EXPERIENCE, { id });
+      await fetch_();
+    } catch (error) {
+      console.error("Error deleting experience:", error);
+    }
   };
 
   return (
@@ -92,7 +137,18 @@ export default function ExperienceAdmin() {
       </div>
       
       <div className={styles.tableHeader}>
-        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{items.length} records found</span>
+        <div style={{display:"flex",gap:8,flex:1,flexWrap:"wrap"}}>
+          <input className={styles.input} style={{maxWidth:220}} placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <select className={styles.select} style={{maxWidth:160}} value={filterType} onChange={e=>setFilterType(e.target.value)}>
+            <option value="">All Types</option>
+            {TYPES.map(t=><option key={t}>{t}</option>)}
+          </select>
+          <select className={styles.select} style={{maxWidth:130}} value={sortOrder} onChange={e=>setSortOrder(e.target.value)}>
+            <option value="asc">Order Asc</option>
+            <option value="desc">Order Desc</option>
+          </select>
+        </div>
+        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? items.length} records found</span>
         <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Record</button>
       </div>
       
@@ -131,6 +187,13 @@ export default function ExperienceAdmin() {
           {items.length === 0 && <tr><td colSpan={6}><div className={styles.emptyState}><div className={styles.emptyIcon}>💼</div><div className={styles.emptyText}>No experience added yet. Add your first career milestone!</div></div></td></tr>}
         </tbody>
       </table>
+      {pageInfo && pageInfo.totalPages > 1 && (
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:8,marginTop:16}}>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasPrev} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+          <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>Page {pageInfo.page} of {pageInfo.totalPages}</span>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasNext} onClick={()=>setPage(p=>p+1)}>Next →</button>
+        </div>
+      )}
 
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>

@@ -12,7 +12,7 @@ export default function SaaSLandingPage() {
           <a href="/admin/login" className="btn btn-outline" style={{ padding: '0.6rem 1.25rem' }}>
             Login
           </a>
-          <a href="/admin/login" className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
+          <a href="/register" className="btn btn-primary" style={{ padding: '0.6rem 1.25rem' }}>
             Get Started
           </a>
         </div>
@@ -40,7 +40,7 @@ export default function SaaSLandingPage() {
             </p>
             
             <div className={styles.ctaRow} style={{ justifyContent: 'center' }}>
-              <a href="/admin/login" className="btn btn-primary" style={{ padding: '0.875rem 2rem', fontSize: '1.125rem' }}>
+              <a href="/register" className="btn btn-primary" style={{ padding: '0.875rem 2rem', fontSize: '1.125rem' }}>
                 Create Your Free Portfolio
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
               </a>

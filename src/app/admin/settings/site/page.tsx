@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
 interface SiteSettings {
   id?: string;
@@ -10,43 +12,79 @@ interface SiteSettings {
   quickLinks: { label: string; href: string }[];
 }
 
+const GET_SETTINGS = `
+  query GetSettings($username: String!) {
+    getPortfolio(username: $username) {
+      siteSettings {
+        heroTagline footerText heroStats quickLinks
+      }
+    }
+  }
+`;
+
+const SAVE_SETTINGS = `
+  mutation SaveSettings($userId: ID!, $input: SiteSettingsInput!) {
+    saveSiteSettings(userId: $userId, input: $input) { id }
+  }
+`;
+
 export default function SiteSettingsAdmin() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [form, setForm] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const fetch_ = useCallback(async () => {
+    if (!username) return;
     setLoading(true);
-    const res = await fetch("/api/settings/site");
-    const data = await res.json();
-    if (data.success) {
-      setForm(data.data);
+    try {
+      const data = await graphqlClient.query(GET_SETTINGS, { username });
+      const raw = data?.getPortfolio?.siteSettings;
+      if (raw) {
+        setForm({
+          ...raw,
+          heroStats: raw.heroStats?.map((s: string) => {
+            const [value, label] = s.split("|");
+            return { value: value || "", label: label || "" };
+          }) || [],
+          quickLinks: raw.quickLinks?.map((l: string) => {
+            const [label, href] = l.split("|");
+            return { label: label || "", href: href || "" };
+          }) || [],
+        });
+      }
+    } catch (error) {
+       console.error("Error fetching settings:", error);
     }
     setLoading(false);
-  }, []);
+  }, [username]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
 
   const handleSave = async () => {
-    if (!form) return;
+    if (!form || !userId) return;
     setSaving(true);
-    
-    // Filter out empties safely
-    const cleanForm = {
-      ...form,
-      heroStats: form.heroStats.filter(s => s.value.trim() && s.label.trim()),
-      quickLinks: form.quickLinks.filter(l => l.label.trim() && l.href.trim()),
-    };
+    try {
+      // Convert objects back to pipe-separated strings for backend
+      const cleanInput = {
+        heroTagline: form.heroTagline,
+        footerText: form.footerText,
+        heroStats: form.heroStats.filter(s => s.value.trim() && s.label.trim()).map(s => `${s.value}|${s.label}`),
+        quickLinks: form.quickLinks.filter(l => l.label.trim() && l.href.trim()).map(l => `${l.label}|${l.href}`),
+      };
 
-    await fetch("/api/settings/site", { 
-      method: "PUT", 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify(cleanForm) 
-    });
-    
-    await fetch_();
-    setSaving(false);
-    alert("Site Settings saved successfully!");
+      await graphqlClient.query(SAVE_SETTINGS, { userId, input: cleanInput });
+      await fetch_();
+      alert("Site Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addStat = () => { if(form) setForm({ ...form, heroStats: [...form.heroStats, { value: "", label: "" }] }) };

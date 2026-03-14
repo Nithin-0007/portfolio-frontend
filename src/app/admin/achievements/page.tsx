@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
 interface Achievement {
   id: string;
@@ -10,20 +12,57 @@ interface Achievement {
 
 const empty: Omit<Achievement, "id"> = { title: "", order: 0 };
 
+const GET_ACHIEVEMENTS = `
+  query GetAchievements($username: String!, $page: Int, $limit: Int, $search: String, $sortBy: String, $sortOrder: String) {
+    getAchievements(username: $username, page: $page, limit: $limit, search: $search, sortBy: $sortBy, sortOrder: $sortOrder) {
+      items { id title order }
+      pageInfo { total page limit totalPages hasNext hasPrev }
+    }
+  }
+`;
+
+const UPSERT_ACHIEVEMENT = `
+  mutation UpsertAchievement($userId: ID!, $input: AchievementInput!) {
+    upsertAchievement(userId: $userId, input: $input) {
+      id
+    }
+  }
+`;
+
+const DELETE_ACHIEVEMENT = `
+  mutation DeleteAchievement($id: ID!) {
+    deleteAchievement(id: $id)
+  }
+`;
+
 export default function AchievementsAdmin() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [items, setItems] = useState<Achievement[]>([]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Achievement | null>(null);
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<any>(null);
+  const limit = 20;
 
   const fetch_ = useCallback(async () => {
-    const res = await fetch("/api/achievements");
-    const data = await res.json();
-    setItems(data.data || []);
-  }, []);
+    if (!username) return;
+    try {
+      const data = await graphqlClient.query(GET_ACHIEVEMENTS, { username, page, limit, search: search || undefined, sortBy: "order", sortOrder: "asc" });
+      setItems(data?.getAchievements?.items || []);
+      setPageInfo(data?.getAchievements?.pageInfo || null);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+    }
+  }, [username, page, search]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => { setPage(1); }, [search]);
 
   const openModal = (item?: Achievement) => {
     setEditing(item || null);
@@ -32,25 +71,28 @@ export default function AchievementsAdmin() {
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     setLoading(true);
-    const method = editing ? "PUT" : "POST";
-    const body = editing ? { ...form, id: editing.id } : form;
-    
-    await fetch("/api/achievements", { 
-      method, 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify(body) 
-    });
-    
-    setModal(false);
-    await fetch_();
-    setLoading(false);
+    try {
+      const { ...input } = form;
+      await graphqlClient.query(UPSERT_ACHIEVEMENT, { userId, input });
+      setModal(false);
+      await fetch_();
+    } catch (error) {
+      console.error("Error saving achievement:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this achievement?")) return;
-    await fetch(`/api/achievements?id=${id}`, { method: "DELETE" });
-    await fetch_();
+    try {
+      await graphqlClient.query(DELETE_ACHIEVEMENT, { id });
+      await fetch_();
+    } catch (error) {
+      console.error("Error deleting achievement:", error);
+    }
   };
 
   return (
@@ -61,7 +103,8 @@ export default function AchievementsAdmin() {
       </div>
       
       <div className={styles.tableHeader}>
-        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{items.length} achievements found</span>
+        <input className={styles.input} style={{maxWidth:260}} placeholder="Search achievements..." value={search} onChange={e=>setSearch(e.target.value)}/>
+        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? items.length} achievements found</span>
         <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Achievement</button>
       </div>
       
@@ -85,6 +128,13 @@ export default function AchievementsAdmin() {
           {items.length === 0 && <tr><td colSpan={3}><div className={styles.emptyState}><div className={styles.emptyIcon}>🏆</div><div className={styles.emptyText}>No achievements added yet. Add your first career milestone!</div></div></td></tr>}
         </tbody>
       </table>
+      {pageInfo && pageInfo.totalPages > 1 && (
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:8,marginTop:16}}>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasPrev} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+          <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>Page {pageInfo.page} of {pageInfo.totalPages}</span>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasNext} onClick={()=>setPage(p=>p+1)}>Next →</button>
+        </div>
+      )}
 
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>

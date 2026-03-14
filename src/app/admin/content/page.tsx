@@ -2,10 +2,39 @@
 
 import { useState, useEffect } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
+
+const GET_CONTENT = `
+  query GetContent($username: String!) {
+    getPortfolio(username: $username) {
+      hero { id greeting name roles description }
+      about { 
+        id bio1 bio2 highlights location email phone availability 
+        github linkedin twitter profileImage cvUrl snippetRole snippetPassion snippetCoffee 
+      }
+    }
+  }
+`;
+
+const SAVE_HERO = `
+  mutation SaveHero($userId: ID!, $input: HeroInput!) {
+    saveHero(userId: $userId, input: $input) { id }
+  }
+`;
+
+const SAVE_ABOUT = `
+  mutation SaveAbout($userId: ID!, $input: AboutInput!) {
+    saveAbout(userId: $userId, input: $input) { id }
+  }
+`;
 
 export default function ContentManager() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [heroData, setHeroData] = useState({
-    id: "",
     greeting: "",
     name: "",
     roles: [""],
@@ -13,7 +42,6 @@ export default function ContentManager() {
   });
 
   const [aboutData, setAboutData] = useState({
-    id: "",
     bio1: "",
     bio2: "",
     highlights: [""],
@@ -36,14 +64,12 @@ export default function ContentManager() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/content/hero").then(r => r.json()),
-      fetch("/api/content/about").then(r => r.json())
-    ]).then(([heroRes, aboutRes]) => {
-      if (heroRes.success && heroRes.data) setHeroData(heroRes.data);
-      if (aboutRes.success && aboutRes.data) setAboutData(aboutRes.data);
+    if (!username) return;
+    graphqlClient.query(GET_CONTENT, { username }).then(data => {
+      if (data?.getPortfolio?.hero) setHeroData(data.getPortfolio.hero);
+      if (data?.getPortfolio?.about) setAboutData(data.getPortfolio.about);
     }).finally(() => setLoading(false));
-  }, []);
+  }, [username]);
 
   const handleHeroChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setHeroData({ ...heroData, [e.target.name]: e.target.value });
@@ -53,7 +79,6 @@ export default function ContentManager() {
     setAboutData({ ...aboutData, [e.target.name]: e.target.value });
   };
 
-  // Roles array handlers
   const handleRoleChange = (index: number, value: string) => {
     const newRoles = [...heroData.roles];
     newRoles[index] = value;
@@ -62,7 +87,6 @@ export default function ContentManager() {
   const addRole = () => setHeroData({ ...heroData, roles: [...heroData.roles, ""] });
   const removeRole = (index: number) => setHeroData({ ...heroData, roles: heroData.roles.filter((_, i) => i !== index) });
 
-  // Highlights array handlers
   const handleHighlightChange = (index: number, value: string) => {
     const newHighlights = [...aboutData.highlights];
     newHighlights[index] = value;
@@ -72,49 +96,24 @@ export default function ContentManager() {
   const removeHighlight = (index: number) => setAboutData({ ...aboutData, highlights: aboutData.highlights.filter((_, i) => i !== index) });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "profileImage" | "cvUrl") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAboutData({ ...aboutData, [field]: data.url });
-      } else {
-        alert("Upload failed: " + data.error);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Upload failed.");
-    }
+    // Skipping file upload implementation for now as it requires S3/Storage setup
+    alert("File upload is currently being migrated to AWS S3. Please provide a URL for now.");
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     setSaving(true);
     try {
-      const { id: hId, createdAt: hC, updatedAt: hU, roles, ...heroPayload } = heroData as any;
-      const cleanRoles = roles ? roles.filter((r:string) => r.trim() !== "") : [];
+      // Remove metadata for mutation
+      const { id: hId, ...heroInput } = heroData as any;
+      heroInput.roles = heroInput.roles.filter((r:string) => r.trim() !== "");
       
-      const { id: aId, createdAt: aC, updatedAt: aU, highlights, ...aboutPayload } = aboutData as any;
-      const cleanHighlights = highlights ? highlights.filter((h:string) => h.trim() !== "") : [];
+      const { id: aId, ...aboutInput } = aboutData as any;
+      aboutInput.highlights = aboutInput.highlights.filter((h:string) => h.trim() !== "");
 
       await Promise.all([
-        fetch("/api/content/hero", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...heroPayload, roles: cleanRoles }),
-        }).then(r => r.json()),
-        fetch("/api/content/about", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...aboutPayload, highlights: cleanHighlights }),
-        }).then(r => r.json())
+        graphqlClient.query(SAVE_HERO, { userId, input: heroInput }),
+        graphqlClient.query(SAVE_ABOUT, { userId, input: aboutInput })
       ]);
       
       alert("All content saved successfully!");

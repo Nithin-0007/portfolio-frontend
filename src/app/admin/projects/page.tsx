@@ -1,26 +1,68 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
+import { useSession } from "next-auth/react";
+import { graphqlClient } from "@/lib/graphql-client";
 
 interface Project { id: string; title: string; description: string; tags: string[]; category: string; icon: string; color: string; github?: string; live?: string; featured: boolean; published: boolean; }
 
 const empty: Omit<Project, "id"> = { title: "", description: "", tags: [], category: "Web App", icon: "💼", color: "#7c3aed", github: "", live: "", featured: false, published: true };
 const CATEGORIES = ["Web App", "Full-Stack", "AI/ML", "Mobile", "Tool", "Other"];
 
+const GET_PROJECTS = `
+  query GetProjects($username: String!, $admin: Boolean, $page: Int, $limit: Int, $search: String, $category: String, $sortBy: String, $sortOrder: String) {
+    getProjects(username: $username, admin: $admin, page: $page, limit: $limit, search: $search, category: $category, sortBy: $sortBy, sortOrder: $sortOrder) {
+      items { id title description tags category icon color github live featured published order }
+      pageInfo { total page limit totalPages hasNext hasPrev }
+    }
+  }
+`;
+
+const UPSERT_PROJECT = `
+  mutation UpsertProject($userId: ID!, $input: ProjectInput!) {
+    upsertProject(userId: $userId, input: $input) {
+      id
+    }
+  }
+`;
+
+const DELETE_PROJECT = `
+  mutation DeleteProject($id: ID!) {
+    deleteProject(id: $id)
+  }
+`;
+
 export default function ProjectsAdmin() {
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id;
+  const username = (session?.user as any)?.username;
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [sortBy, setSortBy] = useState("order");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [page, setPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState<any>(null);
+  const limit = 10;
 
   const fetch_ = useCallback(async () => {
-    const res = await fetch("/api/projects");
-    const data = await res.json();
-    setProjects(data.data || []);
-  }, []);
+    if (!username) return;
+    try {
+      const data = await graphqlClient.query(GET_PROJECTS, { username, admin: true, page, limit, search: search || undefined, category: category || undefined, sortBy, sortOrder });
+      setProjects(data?.getProjects?.items || []);
+      setPageInfo(data?.getProjects?.pageInfo || null);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  }, [username, page, search, category, sortBy, sortOrder]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+  useEffect(() => { setPage(1); }, [search, category, sortBy, sortOrder]);
 
   const openModal = (p?: Project) => {
     setEditing(p || null);
@@ -29,19 +71,34 @@ export default function ProjectsAdmin() {
   };
 
   const handleSave = async () => {
+    if (!userId) return;
     setLoading(true);
-    const method = editing ? "PUT" : "POST";
-    const body = editing ? { ...form, id: editing.id } : form;
-    await fetch("/api/projects", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    setModal(false);
-    await fetch_();
-    setLoading(false);
+    try {
+      // Remove unwanted fields for mutation input
+      const { ...input } = form;
+      await graphqlClient.query(UPSERT_PROJECT, { 
+        userId, 
+        input 
+      });
+      setModal(false);
+      await fetch_();
+    } catch (error) {
+      console.error("Error saving project:", error);
+      alert("Failed to save project. Check console.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this project?")) return;
-    await fetch(`/api/projects?id=${id}`, { method: "DELETE" });
-    await fetch_();
+    try {
+      await graphqlClient.query(DELETE_PROJECT, { id });
+      await fetch_();
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      alert("Failed to delete project.");
+    }
   };
 
   return (
@@ -51,7 +108,23 @@ export default function ProjectsAdmin() {
         <p className={styles.pageSubtitle}>Manage your portfolio projects</p>
       </div>
       <div className={styles.tableHeader}>
-        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{projects.length} projects</span>
+        <div style={{display:"flex",gap:8,flex:1,flexWrap:"wrap"}}>
+          <input className={styles.input} style={{maxWidth:220}} placeholder="Search projects..." value={search} onChange={e=>{setSearch(e.target.value);}}/>
+          <select className={styles.select} style={{maxWidth:160}} value={category} onChange={e=>setCategory(e.target.value)}>
+            <option value="">All Categories</option>
+            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+          </select>
+          <select className={styles.select} style={{maxWidth:140}} value={sortBy} onChange={e=>setSortBy(e.target.value)}>
+            <option value="order">Sort: Order</option>
+            <option value="title">Sort: Title</option>
+            <option value="createdAt">Sort: Date</option>
+          </select>
+          <select className={styles.select} style={{maxWidth:120}} value={sortOrder} onChange={e=>setSortOrder(e.target.value)}>
+            <option value="asc">Asc</option>
+            <option value="desc">Desc</option>
+          </select>
+        </div>
+        <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? projects.length} projects</span>
         <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Project</button>
       </div>
       <table className={styles.table}>
@@ -72,6 +145,13 @@ export default function ProjectsAdmin() {
           {projects.length === 0 && <tr><td colSpan={6}><div className={styles.emptyState}><div className={styles.emptyIcon}>💼</div><div className={styles.emptyText}>No projects yet. Add your first one!</div></div></td></tr>}
         </tbody>
       </table>
+      {pageInfo && pageInfo.totalPages > 1 && (
+        <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:8,marginTop:16}}>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasPrev} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+          <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>Page {pageInfo.page} of {pageInfo.totalPages}</span>
+          <button className={styles.btnSecondary} disabled={!pageInfo.hasNext} onClick={()=>setPage(p=>p+1)}>Next →</button>
+        </div>
+      )}
 
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>
