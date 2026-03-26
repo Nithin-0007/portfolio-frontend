@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useConfirm } from "../components/ConfirmDialog";
 
 const GET_CONTENT = `
   query GetContent($username: String!) {
@@ -62,6 +63,7 @@ export default function ContentManager() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   useEffect(() => {
     if (!username) return;
@@ -114,12 +116,19 @@ export default function ContentManager() {
 
   const handleSave = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: "Save all changes?",
+      message: "Your profile content, hero section, biography, and contact information will be updated.",
+      confirmLabel: "Save Changes",
+      danger: false,
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       // Remove metadata for mutation
       const { id: hId, ...heroInput } = heroData as any;
       heroInput.roles = heroInput.roles.filter((r:string) => r.trim() !== "");
-      
+
       const { id: aId, ...aboutInput } = aboutData as any;
       aboutInput.highlights = aboutInput.highlights.filter((h:string) => h.trim() !== "");
 
@@ -127,11 +136,8 @@ export default function ContentManager() {
         graphqlClient.query(SAVE_HERO, { userId, input: heroInput }),
         graphqlClient.query(SAVE_ABOUT, { userId, input: aboutInput })
       ]);
-      
-      alert("All content saved successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to save content.");
     } finally {
       setSaving(false);
     }
@@ -141,6 +147,7 @@ export default function ContentManager() {
 
   return (
     <div className={styles.page}>
+      {confirmDialog}
       <div className={styles.pageHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className={styles.pageTitle}>Profile Content</h1>
