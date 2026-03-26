@@ -1,22 +1,28 @@
 .adminShell {
   display: flex;
   min-height: 100vh;
-  background: #060d1a;
+  background: #04080f;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% -10%, rgba(124, 58, 237, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 110%, rgba(6, 182, 212, 0.06) 0%, transparent 55%);
   color: #f8fafc;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .adminMain {
   flex: 1;
   overflow: auto;
   margin-left: 260px;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
 }
 
 .adminContent {
   padding: 32px;
-  max-width: 1400px;
+  max-width: 1440px;
 }
 
 @media (max-width: 900px) {
-  .adminMain { margin-left: 0; }
+  .adminMain { margin-left: 0 !important; }
+  .adminContent { padding: 20px 16px; }
 }

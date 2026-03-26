@@ -1,10 +1,9 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import styles from "../admin/login/login.module.css";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState({
     username: "",
     name: "",
@@ -34,8 +33,19 @@ export default function RegisterPage() {
         return;
       }
 
-      // Success - redirect to portfolio
-      window.location.href = `/${data.username}`;
+      // Auto-login and redirect to admin panel
+      const result = await signIn("credentials", {
+        identifier: formData.identifier,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Account created! Please log in.");
+        window.location.href = "/admin/login";
+      } else {
+        window.location.href = "/admin";
+      }
     } catch (err) {
       setError("Something went wrong. Please try again.");
       setLoading(false);
@@ -77,7 +87,7 @@ export default function RegisterPage() {
               title="Only lowercase letters, numbers, and hyphens"
             />
             <small style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "-4px" }}>
-              Your portfolio: domain.com/{formData.username || "your-username"}
+              Your portfolio URL: <strong style={{ color: "#a78bfa" }}>{typeof window !== "undefined" ? window.location.host : "yoursite.com"}/{formData.username || "your-username"}</strong>
             </small>
           </div>
 

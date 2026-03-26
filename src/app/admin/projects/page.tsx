@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Project { id: string; title: string; description: string; tags: string[]; category: string; icon: string; color: string; github?: string; live?: string; featured: boolean; published: boolean; }
 
@@ -49,20 +51,22 @@ export default function ProjectsAdmin() {
   const [page, setPage] = useState(1);
   const [pageInfo, setPageInfo] = useState<any>(null);
   const limit = 10;
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   const fetch_ = useCallback(async () => {
     if (!username) return;
     try {
-      const data = await graphqlClient.query(GET_PROJECTS, { username, admin: true, page, limit, search: search || undefined, category: category || undefined, sortBy, sortOrder });
+      const data = await graphqlClient.query(GET_PROJECTS, { username, admin: true, page, limit, search: debouncedSearch || undefined, category: category || undefined, sortBy, sortOrder });
       setProjects(data?.getProjects?.items || []);
       setPageInfo(data?.getProjects?.pageInfo || null);
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
-  }, [username, page, search, category, sortBy, sortOrder]);
+  }, [username, page, debouncedSearch, category, sortBy, sortOrder]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search, category, sortBy, sortOrder]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, category, sortBy, sortOrder]);
 
   const openModal = (p?: Project) => {
     setEditing(p || null);
@@ -72,14 +76,30 @@ export default function ProjectsAdmin() {
 
   const handleSave = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: editing ? "Save changes?" : "Create project?",
+      message: editing ? "Your updates will be published immediately." : "This project will be added to your portfolio.",
+      confirmLabel: editing ? "Save Changes" : "Create",
+      danger: false,
+      icon: editing ? "◈" : "◈",
+    });
+    if (!ok) return;
     setLoading(true);
     try {
-      // Remove unwanted fields for mutation input
-      const { ...input } = form;
-      await graphqlClient.query(UPSERT_PROJECT, { 
-        userId, 
-        input 
-      });
+      const input: any = {
+        title: form.title,
+        description: form.description,
+        tags: form.tags,
+        category: form.category,
+        icon: form.icon,
+        color: form.color,
+        github: form.github || undefined,
+        live: form.live || undefined,
+        featured: form.featured,
+        published: form.published,
+      };
+      if (editing?.id) input.id = editing.id;
+      await graphqlClient.mutate(UPSERT_PROJECT, { userId, input });
       setModal(false);
       await fetch_();
     } catch (error) {
@@ -91,13 +111,18 @@ export default function ProjectsAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this project?")) return;
+    const ok = await confirm({
+      title: "Delete this project?",
+      message: "This will permanently remove the project from your portfolio. This action cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     try {
-      await graphqlClient.query(DELETE_PROJECT, { id });
+      await graphqlClient.mutate(DELETE_PROJECT, { id });
       await fetch_();
     } catch (error) {
       console.error("Error deleting project:", error);
-      alert("Failed to delete project.");
     }
   };
 
@@ -184,6 +209,7 @@ export default function ProjectsAdmin() {
           </div>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

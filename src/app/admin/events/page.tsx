@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Event { id: string; title: string; description: string; date: string; location: string; type: string; status: string; featured: boolean; virtual: boolean; meetingUrl?: string; tags: string[]; capacity?: number; }
 
@@ -57,19 +59,22 @@ export default function EventsAdmin() {
   const [pageInfo, setPageInfo] = useState<any>(null);
   const limit = 10;
 
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
   const fetch_ = useCallback(async () => {
     if (!username) return;
     try {
-      const data = await graphqlClient.query(GET_EVENTS, { username, page, limit, search: search || undefined, type: filterType || undefined, status: filterStatus || undefined, sortBy, sortOrder });
+      const data = await graphqlClient.query(GET_EVENTS, { username, page, limit, search: debouncedSearch || undefined, type: filterType || undefined, status: filterStatus || undefined, sortBy, sortOrder });
       setEvents(data?.getEvents?.items || []);
       setPageInfo(data?.getEvents?.pageInfo || null);
     } catch (error) {
       console.error("Error fetching events:", error);
     }
-  }, [username, page, search, filterType, filterStatus, sortBy, sortOrder]);
+  }, [username, page, debouncedSearch, filterType, filterStatus, sortBy, sortOrder]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search, filterType, filterStatus, sortBy, sortOrder]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, filterType, filterStatus, sortBy, sortOrder]);
 
   const openModal = (e?: Event) => {
     setEditing(e || null);
@@ -79,13 +84,31 @@ export default function EventsAdmin() {
 
   const handleSave = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: editing ? "Save changes?" : "Create event?",
+      message: editing ? "Your updates will be published immediately." : "This event will be added to your portfolio.",
+      confirmLabel: editing ? "Save Changes" : "Create Event",
+      danger: false,
+    });
+    if (!ok) return;
     setLoading(true);
     try {
-      const { ...input } = form;
-      // Ensure date is ISO string for backend
-      input.date = new Date(input.date).toISOString();
+      const input: any = {
+        title: form.title,
+        description: form.description,
+        date: new Date(form.date).toISOString(),
+        location: form.location || undefined,
+        type: form.type,
+        status: form.status,
+        featured: form.featured,
+        virtual: form.virtual,
+        meetingUrl: form.meetingUrl || undefined,
+        tags: form.tags,
+        capacity: form.capacity || undefined,
+      };
+      if (editing?.id) input.id = editing.id;
       
-      await graphqlClient.query(UPSERT_EVENT, { userId, input });
+      await graphqlClient.mutate(UPSERT_EVENT, { userId, input });
       setModal(false);
       await fetch_();
     } catch (error) {
@@ -96,9 +119,9 @@ export default function EventsAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this event?")) return;
+    if (!await confirm({ title: "Delete this event?", message: "This event will be permanently removed. This action cannot be undone.", confirmLabel: "Delete", danger: true })) return;
     try {
-      await graphqlClient.query(DELETE_EVENT, { id });
+      await graphqlClient.mutate(DELETE_EVENT, { id });
       await fetch_();
     } catch (error) {
       console.error("Error deleting event:", error);
@@ -151,6 +174,7 @@ export default function EventsAdmin() {
         </div>
       )}
 
+      {confirmDialog}
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>
           <div className={styles.modalCard}>

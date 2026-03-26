@@ -96,8 +96,20 @@ export default function ContentManager() {
   const removeHighlight = (index: number) => setAboutData({ ...aboutData, highlights: aboutData.highlights.filter((_, i) => i !== index) });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: "profileImage" | "cvUrl") => {
-    // Skipping file upload implementation for now as it requires S3/Storage setup
-    alert("File upload is currently being migrated to AWS S3. Please provide a URL for now.");
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("field", field);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const { url } = await res.json();
+      setAboutData((prev) => ({ ...prev, [field]: url }));
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Upload failed. Check console.");
+    }
   };
 
   const handleSave = async () => {

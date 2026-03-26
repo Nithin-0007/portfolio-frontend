@@ -13,9 +13,8 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/admin/login", req.url));
   }
 
-  // Allow both ADMIN and VIEWER to access admin panel
-  // ADMIN can manage all users, VIEWER can only manage their own content
-  if (isAdminRoute && !isLoginPage && isLoggedIn && !userRole) {
+  // Block users with no role (shouldn't happen, but guard anyway)
+  if (isAdminRoute && !isLoginPage && isLoggedIn && userRole !== "ADMIN" && userRole !== "VIEWER") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

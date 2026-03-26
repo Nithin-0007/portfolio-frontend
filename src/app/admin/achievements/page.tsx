@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Achievement {
   id: string;
@@ -50,19 +52,22 @@ export default function AchievementsAdmin() {
   const [pageInfo, setPageInfo] = useState<any>(null);
   const limit = 20;
 
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
   const fetch_ = useCallback(async () => {
     if (!username) return;
     try {
-      const data = await graphqlClient.query(GET_ACHIEVEMENTS, { username, page, limit, search: search || undefined, sortBy: "order", sortOrder: "asc" });
+      const data = await graphqlClient.query(GET_ACHIEVEMENTS, { username, page, limit, search: debouncedSearch || undefined, sortBy: "order", sortOrder: "asc" });
       setItems(data?.getAchievements?.items || []);
       setPageInfo(data?.getAchievements?.pageInfo || null);
     } catch (error) {
       console.error("Error fetching achievements:", error);
     }
-  }, [username, page, search]);
+  }, [username, page, debouncedSearch]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   const openModal = (item?: Achievement) => {
     setEditing(item || null);
@@ -72,10 +77,18 @@ export default function AchievementsAdmin() {
 
   const handleSave = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: editing ? "Save changes?" : "Add achievement?",
+      message: editing ? "Your updates will be applied immediately." : "This achievement will be added to your timeline.",
+      confirmLabel: editing ? "Save Changes" : "Add Achievement",
+      danger: false,
+    });
+    if (!ok) return;
     setLoading(true);
     try {
-      const { ...input } = form;
-      await graphqlClient.query(UPSERT_ACHIEVEMENT, { userId, input });
+      const input: any = { title: form.title, order: form.order };
+      if (editing?.id) input.id = editing.id;
+      await graphqlClient.mutate(UPSERT_ACHIEVEMENT, { userId, input });
       setModal(false);
       await fetch_();
     } catch (error) {
@@ -86,9 +99,9 @@ export default function AchievementsAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this achievement?")) return;
+    if (!await confirm({ title: "Delete this achievement?", message: "This achievement will be permanently removed. This action cannot be undone.", confirmLabel: "Delete", danger: true })) return;
     try {
-      await graphqlClient.query(DELETE_ACHIEVEMENT, { id });
+      await graphqlClient.mutate(DELETE_ACHIEVEMENT, { id });
       await fetch_();
     } catch (error) {
       console.error("Error deleting achievement:", error);
@@ -136,6 +149,7 @@ export default function AchievementsAdmin() {
         </div>
       )}
 
+      {confirmDialog}
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>
           <div className={styles.modalCard}>

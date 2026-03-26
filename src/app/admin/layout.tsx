@@ -5,7 +5,7 @@ import "../globals.css";
 import styles from "./admin.module.css";
 
 export const metadata: Metadata = {
-  title: "Admin Panel – NR Portfolio",
+  title: "Admin Panel – PortfolioOS",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

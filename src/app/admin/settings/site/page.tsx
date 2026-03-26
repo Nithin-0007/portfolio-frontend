@@ -10,6 +10,11 @@ interface SiteSettings {
   footerText: string;
   heroStats: { value: string; label: string }[];
   quickLinks: { label: string; href: string }[];
+  contactSubtitle: string;
+  contactLocation: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactAvailability: string;
 }
 
 const GET_SETTINGS = `
@@ -17,6 +22,7 @@ const GET_SETTINGS = `
     getPortfolio(username: $username) {
       siteSettings {
         heroTagline footerText heroStats quickLinks
+        contactSubtitle contactLocation contactEmail contactPhone contactAvailability
       }
     }
   }
@@ -54,7 +60,14 @@ export default function SiteSettingsAdmin() {
             const [label, href] = l.split("|");
             return { label: label || "", href: href || "" };
           }) || [],
+          contactSubtitle: raw.contactSubtitle || "",
+          contactLocation: raw.contactLocation || "",
+          contactEmail: raw.contactEmail || "",
+          contactPhone: raw.contactPhone || "",
+          contactAvailability: raw.contactAvailability || "",
         });
+      } else {
+        setForm({ heroTagline: "", footerText: "", heroStats: [], quickLinks: [], contactSubtitle: "", contactLocation: "", contactEmail: "", contactPhone: "", contactAvailability: "" });
       }
     } catch (error) {
        console.error("Error fetching settings:", error);
@@ -74,6 +87,11 @@ export default function SiteSettingsAdmin() {
         footerText: form.footerText,
         heroStats: form.heroStats.filter(s => s.value.trim() && s.label.trim()).map(s => `${s.value}|${s.label}`),
         quickLinks: form.quickLinks.filter(l => l.label.trim() && l.href.trim()).map(l => `${l.label}|${l.href}`),
+        contactSubtitle: form.contactSubtitle,
+        contactLocation: form.contactLocation,
+        contactEmail: form.contactEmail,
+        contactPhone: form.contactPhone,
+        contactAvailability: form.contactAvailability,
       };
 
       await graphqlClient.query(SAVE_SETTINGS, { userId, input: cleanInput });
@@ -165,6 +183,43 @@ export default function SiteSettingsAdmin() {
           </div>
         ))}
         <button className={styles.btnSecondary} onClick={addLink}>+ Add Quick Link</button>
+      </div>
+
+      <div className={styles.card} style={{ marginBottom: "2rem" }}>
+        <h2 className={styles.cardTitle}>Contact Section</h2>
+        <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1.5rem" }}>
+          Controls the Contact page info panel — subtitle text, location, email, phone, and availability badge.
+        </p>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>Contact Subtitle</label>
+          <textarea
+            className={styles.textarea}
+            rows={3}
+            value={form.contactSubtitle}
+            onChange={e => setForm({ ...form, contactSubtitle: e.target.value })}
+            placeholder="Whether you need a full-stack web application..."
+          />
+        </div>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>📍 Location</label>
+            <input className={styles.input} value={form.contactLocation} onChange={e => setForm({ ...form, contactLocation: e.target.value })} placeholder="Chennai, Tamil Nadu, India" />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>🕐 Availability</label>
+            <input className={styles.input} value={form.contactAvailability} onChange={e => setForm({ ...form, contactAvailability: e.target.value })} placeholder="Open to opportunities" />
+          </div>
+        </div>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>📧 Contact Email</label>
+            <input type="email" className={styles.input} value={form.contactEmail} onChange={e => setForm({ ...form, contactEmail: e.target.value })} placeholder="admin@nithish.dev" />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>📱 Contact Phone</label>
+            <input className={styles.input} value={form.contactPhone} onChange={e => setForm({ ...form, contactPhone: e.target.value })} placeholder="+91 98765 43210" />
+          </div>
+        </div>
       </div>
 
       <button className={styles.btnPrimary} style={{ width: "100%", padding: "16px", fontSize: "1.1rem" }} disabled={saving} onClick={handleSave}>

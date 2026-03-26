@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Skill { id: string; label: string; value: number; category: string; icon?: string; order: number; }
 interface Category { id: string; title: string; icon: string; color: string; order: number; }
@@ -50,11 +52,14 @@ export default function SkillsAdmin() {
   const emptySkill: Omit<Skill, "id"> = { label: "", value: 80, category: "Frontend", icon: "", order: 0 };
   const [skillForm, setSkillForm] = useState(emptySkill);
 
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
   const fetch_ = useCallback(async () => {
     if (!username) return;
     setLoading(true);
     try {
-      const data = await graphqlClient.query(GET_SKILLS_AND_CATS, { username, search: search || undefined, category: filterCategory || undefined, sortBy, sortOrder, page, limit });
+      const data = await graphqlClient.query(GET_SKILLS_AND_CATS, { username, search: debouncedSearch || undefined, category: filterCategory || undefined, sortBy, sortOrder, page, limit });
       const items = data?.getSkills?.items || [];
       setSkills(items);
       setPageInfo(data?.getSkills?.pageInfo || null);
@@ -65,10 +70,10 @@ export default function SkillsAdmin() {
       console.error("Error fetching skills:", error);
     }
     setLoading(false);
-  }, [username, search, filterCategory, sortBy, sortOrder, page]);
+  }, [username, debouncedSearch, filterCategory, sortBy, sortOrder, page]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search, filterCategory, sortBy, sortOrder]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, filterCategory, sortBy, sortOrder]);
 
   const openSkillModal = (skill?: Skill) => {
     setEditingSkill(skill?.id ? skill : null);
@@ -78,9 +83,23 @@ export default function SkillsAdmin() {
 
   const saveSkill = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: editingSkill ? "Save changes?" : "Add skill?",
+      message: editingSkill ? "Your updates will be applied immediately." : "This skill will be added to your profile.",
+      confirmLabel: editingSkill ? "Save Changes" : "Add Skill",
+      danger: false,
+    });
+    if (!ok) return;
     try {
-      const { ...input } = skillForm;
-      await graphqlClient.query(UPSERT_SKILL, { userId, input });
+      const input: any = {
+        label: skillForm.label,
+        value: skillForm.value,
+        category: skillForm.category,
+        icon: skillForm.icon || undefined,
+        order: skillForm.order,
+      };
+      if (editingSkill?.id) input.id = editingSkill.id;
+      await graphqlClient.mutate(UPSERT_SKILL, { userId, input });
       setSkillModal(false);
       await fetch_();
     } catch (error) {
@@ -89,9 +108,9 @@ export default function SkillsAdmin() {
   };
 
   const deleteSkill = async (id: string) => {
-    if (!confirm(`Remove this skill?`)) return;
+    if (!await confirm({ title: "Remove this skill?", message: "This skill will be permanently removed.", confirmLabel: "Remove", danger: true })) return;
     try {
-      await graphqlClient.query(DELETE_SKILL, { id });
+      await graphqlClient.mutate(DELETE_SKILL, { id });
       await fetch_();
     } catch (error) {
       console.error("Error deleting skill:", error);
@@ -167,6 +186,7 @@ export default function SkillsAdmin() {
 
       </div>
 
+      {confirmDialog}
       {/* SKILL MODAL */}
       {skillModal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setSkillModal(false)}>

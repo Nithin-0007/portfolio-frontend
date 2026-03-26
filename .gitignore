@@ -50,3 +50,6 @@ verify-admin.ts
 nextjs-build-log.txt
 nextjs-build-log-utf8.txt
 typescript-errors.txt
+
+# uploaded files (stored in Cloudinary in production)
+/public/uploads/

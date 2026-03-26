@@ -11,6 +11,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "All fields are required" }, { status: 400 });
     }
 
+    // Block reserved usernames
+    const reserved = ["admin", "api", "register", "login", "dashboard", "settings", "www", "app", "help", "support", "about", "contact"];
+    if (reserved.includes(username.toLowerCase())) {
+      return NextResponse.json({ error: "This username is reserved. Please choose another." }, { status: 400 });
+    }
+
+    // Validate username format
+    if (!/^[a-z0-9-]+$/.test(username) || username.length < 3 || username.length > 30) {
+      return NextResponse.json({ error: "Username must be 3-30 characters, lowercase letters, numbers, and hyphens only" }, { status: 400 });
+    }
+
     // Determine if identifier is email or phone
     const isEmail = identifier.includes("@");
     const email = isEmail ? identifier : "";

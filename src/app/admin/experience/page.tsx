@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Experience {
   id: string;
@@ -70,19 +72,22 @@ export default function ExperienceAdmin() {
   const [pageInfo, setPageInfo] = useState<any>(null);
   const limit = 10;
 
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
   const fetch_ = useCallback(async () => {
     if (!username) return;
     try {
-      const data = await graphqlClient.query(GET_EXPERIENCES, { username, page, limit, search: search || undefined, type: filterType || undefined, sortBy, sortOrder });
+      const data = await graphqlClient.query(GET_EXPERIENCES, { username, page, limit, search: debouncedSearch || undefined, type: filterType || undefined, sortBy, sortOrder });
       setItems(data?.getExperiences?.items || []);
       setPageInfo(data?.getExperiences?.pageInfo || null);
     } catch (error) {
       console.error("Error fetching experience:", error);
     }
-  }, [username, page, search, filterType, sortBy, sortOrder]);
+  }, [username, page, debouncedSearch, filterType, sortBy, sortOrder]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search, filterType, sortBy, sortOrder]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, filterType, sortBy, sortOrder]);
 
   const openModal = (exp?: Experience) => {
     setEditing(exp || null);
@@ -103,13 +108,28 @@ export default function ExperienceAdmin() {
 
   const handleSave = async () => {
     if (!userId) return;
+    const ok = await confirm({
+      title: editing ? "Save changes?" : "Add record?",
+      message: editing ? "Your updates will be published immediately." : "This experience record will be added to your resume.",
+      confirmLabel: editing ? "Save Changes" : "Add Record",
+      danger: false,
+    });
+    if (!ok) return;
     setLoading(true);
     try {
-      const { ...input } = form;
-      // Filter out empty strings in points
-      input.points = input.points.filter((p) => p.trim() !== "");
+      const input: any = {
+        role: form.role,
+        company: form.company,
+        period: form.period,
+        type: form.type,
+        icon: form.icon,
+        color: form.color,
+        points: form.points.filter((p) => p.trim() !== ""),
+        order: form.order,
+      };
+      if (editing?.id) input.id = editing.id;
 
-      await graphqlClient.query(UPSERT_EXPERIENCE, { userId, input });
+      await graphqlClient.mutate(UPSERT_EXPERIENCE, { userId, input });
       setModal(false);
       await fetch_();
     } catch (error) {
@@ -120,9 +140,9 @@ export default function ExperienceAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this experience record?")) return;
+    if (!await confirm({ title: "Delete this record?", message: "This experience entry will be permanently removed from your resume.", confirmLabel: "Delete", danger: true })) return;
     try {
-      await graphqlClient.query(DELETE_EXPERIENCE, { id });
+      await graphqlClient.mutate(DELETE_EXPERIENCE, { id });
       await fetch_();
     } catch (error) {
       console.error("Error deleting experience:", error);
@@ -195,6 +215,7 @@ export default function ExperienceAdmin() {
         </div>
       )}
 
+      {confirmDialog}
       {modal && (
         <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && setModal(false)}>
           <div className={styles.modalCard}>

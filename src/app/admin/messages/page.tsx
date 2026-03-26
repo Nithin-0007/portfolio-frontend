@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import styles from "../admin-pages.module.css";
 import { useSession } from "next-auth/react";
 import { graphqlClient } from "@/lib/graphql-client";
+import { useDebounce } from "@/lib/useDebounce";
+import { useConfirm } from "../components/ConfirmDialog";
 
 interface Msg { id: string; name: string; email: string; subject: string; message: string; read: boolean; createdAt: string; }
 
@@ -39,24 +41,27 @@ export default function MessagesAdmin() {
   const [pageInfo, setPageInfo] = useState<any>(null);
   const limit = 15;
 
+  const debouncedSearch = useDebounce(search);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+
   const fetch_ = useCallback(async () => {
     if (!username) return;
     try {
       const readFilter = filterRead === "" ? undefined : filterRead === "true";
-      const data = await graphqlClient.query(GET_MESSAGES, { username, page, limit, search: search || undefined, read: readFilter, sortBy: "createdAt", sortOrder: "desc" });
+      const data = await graphqlClient.query(GET_MESSAGES, { username, page, limit, search: debouncedSearch || undefined, read: readFilter, sortBy: "createdAt", sortOrder: "desc" });
       setMessages(data?.getMessages?.items || []);
       setPageInfo(data?.getMessages?.pageInfo || null);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
-  }, [username, page, search, filterRead]);
+  }, [username, page, debouncedSearch, filterRead]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
-  useEffect(() => { setPage(1); }, [search, filterRead]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, filterRead]);
 
   const markRead = async (id: string) => {
     try {
-      await graphqlClient.query(MARK_READ, { id });
+      await graphqlClient.mutate(MARK_READ, { id });
       await fetch_();
     } catch (error) {
       console.error("Error marking read:", error);
@@ -64,9 +69,9 @@ export default function MessagesAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this message?")) return;
+    if (!await confirm({ title: "Delete this message?", message: "This message will be permanently removed. This action cannot be undone.", confirmLabel: "Delete", danger: true })) return;
     try {
-      await graphqlClient.query(DELETE_MESSAGE, { id });
+      await graphqlClient.mutate(DELETE_MESSAGE, { id });
       setSelected(null);
       await fetch_();
     } catch (error) {
@@ -116,6 +121,7 @@ export default function MessagesAdmin() {
         </div>
       )}
 
+      {confirmDialog}
       {selected&&(
         <div className={styles.modal} onClick={e=>e.target===e.currentTarget&&setSelected(null)}>
           <div className={styles.modalCard}>
