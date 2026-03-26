@@ -1,10 +1,16 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+  serverExternalPackages: [
+    "@prisma/client",
+    "prisma",
+    "bcryptjs",
+    "nodemailer",
+    "cloudinary",
+    "@aws-sdk/client-cognito-identity-provider",
+    "@aws-sdk/client-s3",
+    "@aws-sdk/s3-request-presigner",
+  ],
   images: {
     remotePatterns: [
       {
