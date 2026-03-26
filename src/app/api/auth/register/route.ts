@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { username, name, identifier, password } = await req.json();
+    const { username, name, identifier, password, otpCode } = await req.json();
 
     // Validate input
     if (!username || !name || !identifier || !password) {
@@ -28,6 +28,27 @@ export async function POST(req: Request) {
     const isEmail = identifier.includes("@");
     const email = isEmail ? identifier : "";
     const phone = !isEmail ? identifier : "";
+
+    // For email sign-ups, verify OTP before creating account
+    if (isEmail) {
+      if (!otpCode) {
+        return NextResponse.json({ error: "OTP verification required. Please verify your email first." }, { status: 400 });
+      }
+      const stored = await prisma.otp.findUnique({
+        where: { email_purpose: { email, purpose: "register" } },
+      });
+      if (!stored) {
+        return NextResponse.json({ error: "No OTP found. Please request a new OTP." }, { status: 400 });
+      }
+      if (new Date() > stored.expiresAt) {
+        await prisma.otp.delete({ where: { email_purpose: { email, purpose: "register" } } }).catch(() => {});
+        return NextResponse.json({ error: "OTP has expired. Please request a new one." }, { status: 400 });
+      }
+      if (stored.code !== otpCode.trim()) {
+        return NextResponse.json({ error: "Invalid OTP code" }, { status: 400 });
+      }
+      await prisma.otp.delete({ where: { email_purpose: { email, purpose: "register" } } }).catch(() => {});
+    }
 
     // Check if username already exists
     const existingUsername = await prisma.user.findUnique({ where: { username } });

@@ -16,8 +16,30 @@ import { sendOtpEmail } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
-// In-memory OTP store: email -> { code, expiresAt }
-const otpStore = new Map<string, { code: string; expiresAt: number }>();
+// ─── DB-backed OTP helpers ────────────────────────────────────────────────────
+
+async function saveOtp(email: string, purpose: string) {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await prisma.otp.upsert({
+    where: { email_purpose: { email, purpose } },
+    update: { code, expiresAt, createdAt: new Date() },
+    create: { email, code, purpose, expiresAt },
+  });
+  return code;
+}
+
+async function verifyOtp(email: string, purpose: string, code: string): Promise<{ ok: boolean; error?: string }> {
+  const stored = await prisma.otp.findUnique({ where: { email_purpose: { email, purpose } } });
+  if (!stored) return { ok: false, error: "No OTP requested for this email" };
+  if (new Date() > stored.expiresAt) {
+    await prisma.otp.delete({ where: { email_purpose: { email, purpose } } }).catch(() => {});
+    return { ok: false, error: "OTP has expired. Please request a new one." };
+  }
+  if (stored.code !== code.trim()) return { ok: false, error: "Invalid OTP code" };
+  await prisma.otp.delete({ where: { email_purpose: { email, purpose } } }).catch(() => {});
+  return { ok: true };
+}
 
 // Lazy Cognito client — only created when actually used at runtime
 function getCognito() {
@@ -188,6 +210,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      // ── Register: Send OTP to verify email before signup ──────────────
+      case "register-send": {
+        const { email } = body;
+        if (!email) return NextResponse.json({ error: "email required" }, { status: 400 });
+        if (!email.includes("@")) return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+
+        // Check if email is already registered
+        const existing = await prisma.user.findUnique({ where: { email } });
+        if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 400 });
+
+        const code = await saveOtp(email, "register");
+        await sendOtpEmail(email, code);
+
+        return NextResponse.json({ success: true, message: "OTP sent to your email." });
+      }
+
       // ── Forgot Password: Send OTP to email ────────────────────────────
       case "forgot-send": {
         const { email } = body;
@@ -196,8 +234,7 @@ export async function POST(req: NextRequest) {
         // Check user exists (always return success to avoid email enumeration)
         const user = await prisma.user.findUnique({ where: { email } });
         if (user) {
-          const code = Math.floor(100000 + Math.random() * 900000).toString();
-          otpStore.set(email, { code, expiresAt: Date.now() + 10 * 60 * 1000 });
+          const code = await saveOtp(email, "forgot-password");
           await sendOtpEmail(email, code);
         }
 
@@ -210,16 +247,8 @@ export async function POST(req: NextRequest) {
         if (!email || !otp || !newPassword)
           return NextResponse.json({ error: "email, otp, and newPassword required" }, { status: 400 });
 
-        const stored = otpStore.get(email);
-        if (!stored) return NextResponse.json({ error: "No OTP requested for this email" }, { status: 400 });
-        if (Date.now() > stored.expiresAt) {
-          otpStore.delete(email);
-          return NextResponse.json({ error: "OTP has expired. Please request a new one." }, { status: 400 });
-        }
-        if (stored.code !== otp.trim())
-          return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
-
-        otpStore.delete(email);
+        const result = await verifyOtp(email, "forgot-password", otp);
+        if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
         const hashed = await bcrypt.hash(newPassword, 10);
         const updated = await prisma.user.updateMany({
