@@ -95,7 +95,7 @@ export default function AdminSidebar() {
                 <a
                   key={item.href}
                   href={item.href}
-                  className={`${styles.navItem} ${isActive(item.href, item.exact) ? styles.active : ""}`}
+                  className={`${styles.navItem} ${isActive(item.href, (item as any).exact) ? styles.active : ""}`}
                 >
                   <span className={styles.icon}>{item.icon}</span>
                   {!collapsed && <span className={styles.label}>{item.label}</span>}
