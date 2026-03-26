@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 
@@ -13,6 +13,11 @@ const firaCode = Fira_Code({
   variable: "--font-fira",
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "Professional Portfolio | Digital Showcase",

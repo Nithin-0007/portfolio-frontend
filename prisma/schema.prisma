@@ -10,6 +10,18 @@ datasource db {
 
 // ==================== AUTH ====================
 
+model Otp {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  code      String
+  purpose   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, purpose])
+  @@map("otps")
+}
+
 enum Role {
   ADMIN
   MEMBER

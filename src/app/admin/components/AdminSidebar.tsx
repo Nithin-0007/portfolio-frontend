@@ -44,6 +44,7 @@ export default function AdminSidebar() {
   const router = useRouter();
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -59,7 +60,24 @@ export default function AdminSidebar() {
   const roleLabel = userRole === "ADMIN" ? "Admin" : userRole === "MEMBER" ? "Member" : "Viewer";
 
   return (
-    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>
+    <>
+      {/* Mobile hamburger toggle */}
+      {!mobileOpen && (
+        <button
+          className={styles.mobileToggle}
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
+      )}
+
+      {/* Overlay backdrop */}
+      {mobileOpen && (
+        <div className={styles.overlay} onClick={() => setMobileOpen(false)} />
+      )}
+
+    <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${mobileOpen ? styles.mobileOpen : ""}`}>
 
       {/* Logo */}
       <div className={styles.logo}>
@@ -96,6 +114,7 @@ export default function AdminSidebar() {
                   key={item.href}
                   href={item.href}
                   className={`${styles.navItem} ${isActive(item.href, (item as any).exact) ? styles.active : ""}`}
+                  onClick={() => setMobileOpen(false)}
                 >
                   <span className={styles.icon}>{item.icon}</span>
                   {!collapsed && <span className={styles.label}>{item.label}</span>}
@@ -128,5 +147,6 @@ export default function AdminSidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }

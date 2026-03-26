@@ -1,51 +1,116 @@
 import nodemailer from "nodemailer";
 
-export const sendOtpEmail = async (to: string, code: string) => {
-  // Use mock logging if SMTP is not configured
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.log(`\n============================`);
-    console.log(`✉️ Simulated Email Sent to ${to}`);
-    console.log(`🔑 OTP CODE: ${code}`);
-    console.log(`============================\n`);
-    return;
-  }
+type OtpPurpose = "login" | "register" | "forgot-password";
 
-  const transporter = nodemailer.createTransport({
+function createTransporter() {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: Number(process.env.SMTP_PORT || 587),
-    secure: false, // true for 465, false for other ports
+    secure: Number(process.env.SMTP_PORT) === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
+}
 
-  const mailOptions = {
-    from: `"NR Portfolio Admin" <${process.env.SMTP_USER}>`,
-    to,
-    subject: "Your Login OTP Code",
-    text: `Your OTP code is: ${code}. It is valid for 10 minutes.`,
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center;">
-        <h2>Admin Authentication</h2>
-        <p>Your one-time password (OTP) to sign in is:</p>
-        <h1 style="font-size: 32px; letter-spacing: 5px; color: #7c3aed; background: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block;">
-          ${code}
-        </h1>
-        <p style="color: #64748b; font-size: 14px; margin-top: 20px;">This code will expire in 10 minutes.</p>
-        <p style="color: #94a3b8; font-size: 12px;">If you didn't request this code, you can safely ignore this email.</p>
-      </div>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-  } catch (err) {
-    console.error("SMTP Error: Could not send email. Falling back to console logging.");
-    console.error(err);
-    console.log(`\n============================`);
-    console.log(`✉️ Simulated Email Sent to ${to}`);
-    console.log(`🔑 OTP CODE: ${code}`);
-    console.log(`============================\n`);
-  }
+const CONFIG: Record<OtpPurpose, { subject: string; heading: string; description: string; color: string }> = {
+  login: {
+    subject: "Your Login OTP – PortfolioOS",
+    heading: "Sign In Verification",
+    description: "Use this one-time code to sign in to your PortfolioOS account:",
+    color: "#7c3aed",
+  },
+  register: {
+    subject: "Verify Your Email – PortfolioOS",
+    heading: "Email Verification",
+    description: "Enter this code to verify your email address and complete registration:",
+    color: "#06b6d4",
+  },
+  "forgot-password": {
+    subject: "Reset Your Password – PortfolioOS",
+    heading: "Password Reset",
+    description: "Use this code to reset your PortfolioOS account password:",
+    color: "#ec4899",
+  },
 };
+
+function buildEmailHtml(code: string, purpose: OtpPurpose): string {
+  const { heading, description, color } = CONFIG[purpose];
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#030712;font-family:'Inter',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#030712;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#080f1f;border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,${color} 0%,#06b6d4 100%);padding:32px 36px;text-align:center;">
+            <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:10px;">
+              <div style="width:38px;height:38px;background:rgba(255,255,255,0.2);border-radius:10px;display:inline-block;line-height:38px;text-align:center;font-weight:900;font-size:1.1rem;color:white;vertical-align:middle;">P</div>
+              <span style="font-size:1.2rem;font-weight:800;color:white;vertical-align:middle;">PortfolioOS</span>
+            </div>
+            <br>
+            <span style="font-size:1.4rem;font-weight:800;color:white;">${heading}</span>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px 36px;text-align:center;">
+            <p style="color:#94a3b8;font-size:0.95rem;margin:0 0 28px;line-height:1.6;">${description}</p>
+            <div style="background:rgba(124,58,237,0.1);border:2px solid rgba(124,58,237,0.35);border-radius:14px;padding:24px 32px;display:inline-block;margin-bottom:28px;">
+              <span style="font-size:2.8rem;font-weight:900;letter-spacing:12px;color:#a78bfa;font-family:monospace;">${code}</span>
+            </div>
+            <p style="color:#64748b;font-size:0.85rem;margin:0 0 8px;">
+              ⏱ This code expires in <strong style="color:#94a3b8;">10 minutes</strong>
+            </p>
+            <p style="color:#475569;font-size:0.8rem;margin:0;">
+              If you didn't request this, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="border-top:1px solid rgba(255,255,255,0.06);padding:18px 36px;text-align:center;">
+            <p style="color:#1e293b;font-size:0.75rem;margin:0;">
+              Automated security email from PortfolioOS · Do not reply
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendOtpEmail(to: string, code: string, purpose: OtpPurpose = "login"): Promise<void> {
+  // Dev fallback: no SMTP credentials configured
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log(`\n${"=".repeat(50)}`);
+    console.log(`[DEV] OTP Email → ${to}`);
+    console.log(`[DEV] Purpose  : ${purpose}`);
+    console.log(`[DEV] OTP Code : ${code}`);
+    console.log(`${"=".repeat(50)}\n`);
+    return;
+  }
+
+  const { subject } = CONFIG[purpose];
+  const transporter = createTransporter();
+
+  // Verify connection before sending
+  await transporter.verify();
+
+  await transporter.sendMail({
+    from: `"PortfolioOS" <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    text: `Your ${purpose} OTP code is: ${code}. It expires in 10 minutes. Do not share this code.`,
+    html: buildEmailHtml(code, purpose),
+  });
+}

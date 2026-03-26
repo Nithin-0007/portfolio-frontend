@@ -155,6 +155,46 @@
 }
 .signOutBtn:hover { color: #f87171; background: rgba(239,68,68,0.08); }
 
+/* Mobile toggle button */
+.mobileToggle {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.18);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  color: #a78bfa;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  transition: all 0.2s;
+}
+.mobileToggle:hover { background: rgba(124, 58, 237, 0.3); }
+
+/* Overlay when mobile sidebar is open */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 99;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @media (max-width: 900px) {
   .sidebar { transform: translateX(-100%); }
+  .sidebar.mobileOpen { transform: translateX(0); z-index: 150; }
+  .mobileToggle { display: flex; }
+  .overlay { display: block; }
 }

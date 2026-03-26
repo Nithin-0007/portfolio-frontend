@@ -210,6 +210,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      // ── Login: Send OTP to email ───────────────────────────────────────
+      case "login-send": {
+        const { email } = body;
+        if (!email || !email.includes("@"))
+          return NextResponse.json({ error: "Valid email address required" }, { status: 400 });
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user || user.status !== "ACTIVE")
+          return NextResponse.json({ error: "No active account found with this email" }, { status: 404 });
+
+        const code = await saveOtp(email, "login");
+        await sendOtpEmail(email, code, "login");
+
+        return NextResponse.json({ success: true, message: "OTP sent to your email." });
+      }
+
       // ── Register: Send OTP to verify email before signup ──────────────
       case "register-send": {
         const { email } = body;
@@ -221,7 +237,7 @@ export async function POST(req: NextRequest) {
         if (existing) return NextResponse.json({ error: "Email already registered" }, { status: 400 });
 
         const code = await saveOtp(email, "register");
-        await sendOtpEmail(email, code);
+        await sendOtpEmail(email, code, "register");
 
         return NextResponse.json({ success: true, message: "OTP sent to your email." });
       }
@@ -233,9 +249,9 @@ export async function POST(req: NextRequest) {
 
         // Check user exists (always return success to avoid email enumeration)
         const user = await prisma.user.findUnique({ where: { email } });
-        if (user) {
+        if (user && user.status === "ACTIVE") {
           const code = await saveOtp(email, "forgot-password");
-          await sendOtpEmail(email, code);
+          await sendOtpEmail(email, code, "forgot-password");
         }
 
         return NextResponse.json({ success: true, message: "If this email is registered, an OTP has been sent." });
