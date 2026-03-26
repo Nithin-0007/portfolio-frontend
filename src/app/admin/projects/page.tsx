@@ -38,6 +38,8 @@ export default function ProjectsAdmin() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [modal, setModal] = useState(false);
@@ -150,7 +152,7 @@ export default function ProjectsAdmin() {
           </select>
         </div>
         <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? projects.length} projects</span>
-        <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Project</button>
+        {canEdit && <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Project</button>}
       </div>
       <table className={styles.table}>
         <thead><tr>
@@ -164,7 +166,7 @@ export default function ProjectsAdmin() {
               <td style={{fontSize:"0.75rem"}}>{p.tags.slice(0,3).join(", ")}{p.tags.length > 3 ? "..." : ""}</td>
               <td>{p.featured ? "⭐" : "—"}</td>
               <td><span className={`${styles.badge} ${p.published ? styles.badgeGreen : styles.badgeGray}`}>{p.published ? "Published" : "Draft"}</span></td>
-              <td><div className={styles.btnGroup}><button className={styles.btnEdit} onClick={() => openModal(p)}>Edit</button><button className={styles.btnDanger} onClick={() => handleDelete(p.id)}>Delete</button></div></td>
+              <td><div className={styles.btnGroup}>{canEdit && <button className={styles.btnEdit} onClick={() => openModal(p)}>Edit</button>}{canEdit && <button className={styles.btnDanger} onClick={() => handleDelete(p.id)}>Delete</button>}</div></td>
             </tr>
           ))}
           {projects.length === 0 && <tr><td colSpan={6}><div className={styles.emptyState}><div className={styles.emptyIcon}>💼</div><div className={styles.emptyText}>No projects yet. Add your first one!</div></div></td></tr>}

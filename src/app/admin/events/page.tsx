@@ -44,6 +44,8 @@ export default function EventsAdmin() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [events, setEvents] = useState<Event[]>([]);
   const [modal, setModal] = useState(false);
@@ -148,7 +150,7 @@ export default function EventsAdmin() {
           </select>
         </div>
         <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? events.length} events</span>
-        <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Create Event</button>
+        {canEdit && <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Create Event</button>}
       </div>
       <table className={styles.table}>
         <thead><tr><th>Event</th><th>Date</th><th>Location</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
@@ -160,7 +162,7 @@ export default function EventsAdmin() {
               <td style={{fontSize:"0.82rem"}}>{e.virtual?"🌐 Virtual":e.location}</td>
               <td><span className={`${styles.badge} ${styles.badgePurple}`}>{e.type}</span></td>
               <td><span className={statusBadge(e.status)}>{e.status}</span></td>
-              <td><div className={styles.btnGroup}><button className={styles.btnEdit} onClick={() => openModal(e)}>Edit</button><button className={styles.btnDanger} onClick={() => handleDelete(e.id)}>Delete</button></div></td>
+              <td><div className={styles.btnGroup}>{canEdit && <button className={styles.btnEdit} onClick={() => openModal(e)}>Edit</button>}{canEdit && <button className={styles.btnDanger} onClick={() => handleDelete(e.id)}>Delete</button>}</div></td>
             </tr>
           ))}
           {events.length === 0 && <tr><td colSpan={6}><div className={styles.emptyState}><div className={styles.emptyIcon}>🎯</div><div className={styles.emptyText}>No events yet.</div></div></td></tr>}

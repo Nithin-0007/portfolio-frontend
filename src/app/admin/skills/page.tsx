@@ -34,6 +34,8 @@ export default function SkillsAdmin() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -135,7 +137,7 @@ export default function SkillsAdmin() {
         <div className={styles.card}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16}}>
             <h2 className={styles.cardTitle} style={{margin:0}}>Proficiency Levels (Bars)</h2>
-            <button className={styles.btnSecondary} style={{padding:"6px 12px"}} onClick={() => openSkillModal({ ...emptySkill, category: "Proficiency", value: 80 } as any)}>+ Add Bar</button>
+            {canEdit && <button className={styles.btnSecondary} style={{padding:"6px 12px"}} onClick={() => openSkillModal({ ...emptySkill, category: "Proficiency", value: 80 } as any)}>+ Add Bar</button>}
           </div>
           <table className={styles.table}>
             <thead><tr><th>Skill Label</th><th>Value (%)</th><th>Actions</th></tr></thead>
@@ -146,8 +148,8 @@ export default function SkillsAdmin() {
                   <td>{p.value}%</td>
                   <td>
                     <div className={styles.btnGroup}>
-                      <button className={styles.btnEdit} onClick={() => openSkillModal(p)}>Edit</button>
-                      <button className={styles.btnDanger} onClick={() => deleteSkill(p.id)}>Del</button>
+                      {canEdit && <button className={styles.btnEdit} onClick={() => openSkillModal(p)}>Edit</button>}
+                      {canEdit && <button className={styles.btnDanger} onClick={() => deleteSkill(p.id)}>Del</button>}
                     </div>
                   </td>
                 </tr>
@@ -161,7 +163,7 @@ export default function SkillsAdmin() {
         <div className={styles.card} style={{ gridColumn: "1 / -1" }}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 16}}>
             <h2 className={styles.cardTitle} style={{margin:0}}>Tech Stack Skills (Chips)</h2>
-            <button className={styles.btnSecondary} onClick={() => openSkillModal()}>+ Add Tech Skill</button>
+            {canEdit && <button className={styles.btnSecondary} onClick={() => openSkillModal()}>+ Add Tech Skill</button>}
           </div>
           <table className={styles.table}>
             <thead><tr><th>Skill Name</th><th>Assigned Category</th><th>Order</th><th>Actions</th></tr></thead>
@@ -173,8 +175,8 @@ export default function SkillsAdmin() {
                   <td>{s.order}</td>
                   <td>
                     <div className={styles.btnGroup}>
-                      <button className={styles.btnEdit} onClick={() => openSkillModal(s)}>Edit</button>
-                      <button className={styles.btnDanger} onClick={() => deleteSkill(s.id)}>Del</button>
+                      {canEdit && <button className={styles.btnEdit} onClick={() => openSkillModal(s)}>Edit</button>}
+                      {canEdit && <button className={styles.btnDanger} onClick={() => deleteSkill(s.id)}>Del</button>}
                     </div>
                   </td>
                 </tr>

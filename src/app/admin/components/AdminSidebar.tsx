@@ -56,7 +56,7 @@ export default function AdminSidebar() {
   const userRole = session?.user?.role as string;
   const isAdmin = userRole === "ADMIN";
   const username = (session?.user as any)?.username || "";
-  const roleLabel = isAdmin ? "Admin" : "Portfolio Owner";
+  const roleLabel = userRole === "ADMIN" ? "Admin" : userRole === "MEMBER" ? "Member" : "Viewer";
 
   return (
     <aside className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""}`}>

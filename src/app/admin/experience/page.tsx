@@ -58,6 +58,8 @@ export default function ExperienceAdmin() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [items, setItems] = useState<Experience[]>([]);
   const [modal, setModal] = useState(false);
@@ -169,7 +171,7 @@ export default function ExperienceAdmin() {
           </select>
         </div>
         <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? items.length} records found</span>
-        <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Record</button>
+        {canEdit && <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Record</button>}
       </div>
       
       <table className={styles.table}>
@@ -198,8 +200,8 @@ export default function ExperienceAdmin() {
               <td style={{ textAlign: "center" }}>{item.order}</td>
               <td>
                 <div className={styles.btnGroup}>
-                  <button className={styles.btnEdit} onClick={() => openModal(item)}>Edit</button>
-                  <button className={styles.btnDanger} onClick={() => handleDelete(item.id)}>Delete</button>
+                  {canEdit && <button className={styles.btnEdit} onClick={() => openModal(item)}>Edit</button>}
+                  {canEdit && <button className={styles.btnDanger} onClick={() => handleDelete(item.id)}>Delete</button>}
                 </div>
               </td>
             </tr>

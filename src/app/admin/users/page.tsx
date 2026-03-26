@@ -24,7 +24,18 @@ async function userApi(action: string, body: object) {
 
 export default function UsersAdmin() {
   const { data: session } = useSession();
-  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const userRole = (session?.user as any)?.role;
+  const isAdmin = userRole === "ADMIN";
+
+  if (session && !isAdmin) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", flexDirection: "column", gap: 16 }}>
+        <div style={{ fontSize: "3rem" }}>🔒</div>
+        <div style={{ color: "#f8fafc", fontWeight: 700, fontSize: "1.2rem" }}>Access Restricted</div>
+        <div style={{ color: "#475569", fontSize: "0.875rem" }}>Only Admins can manage users.</div>
+      </div>
+    );
+  }
 
   const [users, setUsers] = useState<User[]>([]);
   const [modal, setModal] = useState(false);

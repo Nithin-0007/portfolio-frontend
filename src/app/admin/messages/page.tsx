@@ -32,6 +32,8 @@ const DELETE_MESSAGE = `
 export default function MessagesAdmin() {
   const { data: session } = useSession();
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [messages, setMessages] = useState<Msg[]>([]);
   const [selected, setSelected] = useState<Msg | null>(null);
@@ -107,7 +109,7 @@ export default function MessagesAdmin() {
               <td style={{color:m.read?"#94a3b8":"#f8fafc",fontWeight:m.read?400:600}}>{m.subject}</td>
               <td style={{fontSize:"0.8rem"}}>{new Date(m.createdAt).toLocaleDateString()}</td>
               <td><span className={`${styles.badge} ${m.read?styles.badgeGray:styles.badgeBlue}`}>{m.read?"Read":"New"}</span></td>
-              <td><div className={styles.btnGroup}><button className={styles.btnEdit} onClick={()=>openMsg(m)}>View</button><button className={styles.btnDanger} onClick={()=>handleDelete(m.id)}>Delete</button></div></td>
+              <td><div className={styles.btnGroup}><button className={styles.btnEdit} onClick={()=>openMsg(m)}>View</button>{canEdit && <button className={styles.btnDanger} onClick={()=>handleDelete(m.id)}>Delete</button>}</div></td>
             </tr>
           ))}
           {messages.length===0&&<tr><td colSpan={5}><div className={styles.emptyState}><div className={styles.emptyIcon}>📬</div><div className={styles.emptyText}>No messages yet.</div></div></td></tr>}
@@ -135,7 +137,7 @@ export default function MessagesAdmin() {
               <div><div className={styles.label}>Message</div><div style={{color:"#94a3b8",marginTop:4,lineHeight:1.7,background:"rgba(255,255,255,0.03)",padding:16,borderRadius:10,border:"1px solid rgba(255,255,255,0.07)"}}>{selected.message}</div></div>
               <div style={{color:"#475569",fontSize:"0.78rem"}}>{new Date(selected.createdAt).toLocaleString()}</div>
               <div className={styles.formActions}>
-                <button className={styles.btnDanger} onClick={()=>handleDelete(selected.id)}>Delete</button>
+                {canEdit && <button className={styles.btnDanger} onClick={()=>handleDelete(selected.id)}>Delete</button>}
                 <a href={`mailto:${selected.email}?subject=Re: ${selected.subject}`} className={styles.btnPrimary} style={{textDecoration:"none"}}>📧 Reply via Email</a>
               </div>
             </div>

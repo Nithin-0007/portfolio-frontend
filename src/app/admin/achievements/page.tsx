@@ -41,6 +41,8 @@ export default function AchievementsAdmin() {
   const { data: session } = useSession();
   const userId = (session?.user as any)?.id;
   const username = (session?.user as any)?.username;
+  const role = (session?.user as any)?.role;
+  const canEdit = role === "ADMIN" || role === "MEMBER";
 
   const [items, setItems] = useState<Achievement[]>([]);
   const [modal, setModal] = useState(false);
@@ -118,7 +120,7 @@ export default function AchievementsAdmin() {
       <div className={styles.tableHeader}>
         <input className={styles.input} style={{maxWidth:260}} placeholder="Search achievements..." value={search} onChange={e=>setSearch(e.target.value)}/>
         <span style={{color:"#94a3b8",fontSize:"0.875rem"}}>{pageInfo?.total ?? items.length} achievements found</span>
-        <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Achievement</button>
+        {canEdit && <button className={styles.btnPrimary} onClick={() => openModal()}>➕ Add Achievement</button>}
       </div>
       
       <table className={styles.table}>
@@ -132,8 +134,8 @@ export default function AchievementsAdmin() {
               <td>{item.order}</td>
               <td>
                 <div className={styles.btnGroup}>
-                  <button className={styles.btnEdit} onClick={() => openModal(item)}>Edit</button>
-                  <button className={styles.btnDanger} onClick={() => handleDelete(item.id)}>Delete</button>
+                  {canEdit && <button className={styles.btnEdit} onClick={() => openModal(item)}>Edit</button>}
+                  {canEdit && <button className={styles.btnDanger} onClick={() => handleDelete(item.id)}>Delete</button>}
                 </div>
               </td>
             </tr>
