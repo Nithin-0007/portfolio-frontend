@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function pageInfo(total: number, page: number, limit: number) {
