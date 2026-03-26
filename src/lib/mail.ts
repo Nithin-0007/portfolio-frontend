@@ -3,17 +3,17 @@ import nodemailer from "nodemailer";
 type OtpPurpose = "login" | "register" | "forgot-password";
 
 function createTransporter() {
+  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+  const port = Number((process.env.SMTP_PORT || "587").trim());
+  const user = (process.env.SMTP_USER || "").trim();
+  const pass = (process.env.SMTP_PASS || "").trim();
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false },
   });
 }
 
@@ -91,7 +91,9 @@ function buildEmailHtml(code: string, purpose: OtpPurpose): string {
 
 export async function sendOtpEmail(to: string, code: string, purpose: OtpPurpose = "login"): Promise<void> {
   // Dev fallback: no SMTP credentials configured
-  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+  const smtpUser = (process.env.SMTP_USER || "").trim();
+  const smtpPass = (process.env.SMTP_PASS || "").trim();
+  if (!smtpUser || !smtpPass) {
     console.log(`\n${"=".repeat(50)}`);
     console.log(`[DEV] OTP Email → ${to}`);
     console.log(`[DEV] Purpose  : ${purpose}`);
