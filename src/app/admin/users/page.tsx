@@ -264,8 +264,9 @@ export default function UsersAdmin() {
                   <div className={styles.formGroup}>
                     <label className={styles.label}>Role</label>
                     <select className={styles.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                      <option value="ADMIN">Admin</option>
-                      <option value="VIEWER">Viewer</option>
+                      <option value="ADMIN">Admin – full access + Users tab</option>
+                      <option value="MEMBER">Member – full access, no Users tab</option>
+                      <option value="VIEWER">Viewer – read only</option>
                     </select>
                   </div>
                 </div>
