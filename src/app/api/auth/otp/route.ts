@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   CognitoIdentityProviderClient,
-  InitiateAuthCommand,
-  RespondToAuthChallengeCommand,
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   AdminDeleteUserCommand,
-  AdminUpdateUserAttributesCommand,
   AdminDisableUserCommand,
   AdminEnableUserCommand,
-  ListUsersCommand,
   ForgotPasswordCommand,
   ConfirmForgotPasswordCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
@@ -18,12 +14,17 @@ import { auth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 import { sendOtpEmail } from "@/lib/mail";
 
+export const dynamic = "force-dynamic";
+
 // In-memory OTP store: email -> { code, expiresAt }
 const otpStore = new Map<string, { code: string; expiresAt: number }>();
 
-const cognito = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION || "us-east-1" });
-const POOL_ID = process.env.COGNITO_USER_POOL_ID!;
-const CLIENT_ID = process.env.COGNITO_CLIENT_ID!;
+// Lazy Cognito client — only created when actually used at runtime
+function getCognito() {
+  return new CognitoIdentityProviderClient({ region: process.env.AWS_REGION || "us-east-1" });
+}
+function getPoolId() { return process.env.COGNITO_USER_POOL_ID || ""; }
+function getClientId() { return process.env.COGNITO_CLIENT_ID || ""; }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       case "send-otp": {
         const { identifier } = body;
         if (!identifier) return NextResponse.json({ error: "identifier required" }, { status: 400 });
-        await cognito.send(new ForgotPasswordCommand({ ClientId: CLIENT_ID, Username: identifier }));
+        await getCognito().send(new ForgotPasswordCommand({ ClientId: getClientId(), Username: identifier }));
         return NextResponse.json({ success: true, message: "OTP sent" });
       }
 
@@ -44,8 +45,8 @@ export async function POST(req: NextRequest) {
         const { identifier, otp, newPassword } = body;
         if (!identifier || !otp || !newPassword)
           return NextResponse.json({ error: "identifier, otp, newPassword required" }, { status: 400 });
-        await cognito.send(new ConfirmForgotPasswordCommand({
-          ClientId: CLIENT_ID,
+        await getCognito().send(new ConfirmForgotPasswordCommand({
+          ClientId: getClientId(),
           Username: identifier,
           ConfirmationCode: otp,
           Password: newPassword,
@@ -74,8 +75,8 @@ export async function POST(req: NextRequest) {
         const tempPassword = `Temp${Math.random().toString(36).slice(2, 8)}!1`;
 
         // Create in Cognito
-        await cognito.send(new AdminCreateUserCommand({
-          UserPoolId: POOL_ID,
+        await getCognito().send(new AdminCreateUserCommand({
+          UserPoolId: getPoolId(),
           Username: cognitoUsername,
           TemporaryPassword: tempPassword,
           MessageAction: "SUPPRESS", // we send our own email via SES
@@ -89,8 +90,8 @@ export async function POST(req: NextRequest) {
         }));
 
         // Force permanent password so user can log in immediately
-        await cognito.send(new AdminSetUserPasswordCommand({
-          UserPoolId: POOL_ID,
+        await getCognito().send(new AdminSetUserPasswordCommand({
+          UserPoolId: getPoolId(),
           Username: cognitoUsername,
           Password: tempPassword,
           Permanent: true,
@@ -161,9 +162,9 @@ export async function POST(req: NextRequest) {
         const cognitoUsername = updated.email || updated.phone;
         if (cognitoUsername && status) {
           if (status === "INACTIVE") {
-            await cognito.send(new AdminDisableUserCommand({ UserPoolId: POOL_ID, Username: cognitoUsername })).catch(() => {});
+            await getCognito().send(new AdminDisableUserCommand({ UserPoolId: getPoolId(), Username: cognitoUsername })).catch(() => {});
           } else if (status === "ACTIVE") {
-            await cognito.send(new AdminEnableUserCommand({ UserPoolId: POOL_ID, Username: cognitoUsername })).catch(() => {});
+            await getCognito().send(new AdminEnableUserCommand({ UserPoolId: getPoolId(), Username: cognitoUsername })).catch(() => {});
           }
         }
         return NextResponse.json({ success: true });
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
 
         const cognitoUsername = user.email || user.phone;
         if (cognitoUsername) {
-          await cognito.send(new AdminDeleteUserCommand({ UserPoolId: POOL_ID, Username: cognitoUsername })).catch(() => {});
+          await getCognito().send(new AdminDeleteUserCommand({ UserPoolId: getPoolId(), Username: cognitoUsername })).catch(() => {});
         }
         await prisma.user.delete({ where: { id } });
         return NextResponse.json({ success: true });
