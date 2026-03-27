@@ -133,7 +133,7 @@ export default async function Home({ params }: { params: Promise<{ username: str
         <Hero data={data.hero} stats={data.siteSettings?.heroStats} />
         <About data={data.about} />
         <Skills data={data.skills} />
-        <Projects data={data.projects} />
+        <Projects data={data.projects} github={data.about?.github} />
         <Experience data={data.experiences} achievements={data.achievements} />
         <Events data={data.events} />
         <Contact data={data.about} siteSettings={data.siteSettings} userId={data.user.id} />

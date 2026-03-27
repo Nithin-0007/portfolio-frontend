@@ -7,13 +7,7 @@ export default function Events({ data }: { data: any[] }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
-  const initialEvents = [
-    { title: "React Conf 2024", date: "2024-05-15T10:00:00Z", location: "Las Vegas, NV", type: "CONFERENCE", description: "Speaking about 'The Future of Agentic AI in Web Development' and how we're building autonomous coding assistants.", featured: true, tags: ["React", "AI", "Frontend"] },
-    { title: "Node.js Interactive", date: "2024-06-20T09:00:00Z", location: "Austin, TX", type: "WORKSHOP", description: "Hands-on workshop on building high-performance microservices with Node.js and Rust using napi-rs.", featured: false, tags: ["Node.js", "Performance", "Rust"] },
-    { title: "Global Developer Meetup", date: "2024-07-12T18:00:00Z", location: "Online / Virtual", type: "MEETUP", description: "Hosting a virtual roundtable discussion on open-source sustainability and developer health.", featured: true, virtual: true, tags: ["Community", "OSS"] }
-  ];
-
-  const displayEvents = data && data.length > 0 ? data : initialEvents;
+  const displayEvents = data && data.length > 0 ? data : [];
 
   useEffect(() => {
     const observer = new IntersectionObserver(

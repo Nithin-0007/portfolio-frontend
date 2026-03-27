@@ -9,16 +9,12 @@ export default function Hero({ data, stats: propStats }: { data: any; stats: any
   const [deleting, setDeleting] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const heroRoles = data?.roles || ["Professional Developer", "Innovation Builder", "Solution Architect"];
-  const heroName = data?.name || "Digital Portfolio";
+  const heroRoles = data?.roles || [];
+  const heroName = data?.name || "";
   const heroGreeting = data?.greeting || "Hello, I'm";
-  const heroDescription = data?.description || "Passionate about building modern applications and digital experiences.";
-  
-  const stats = propStats || [
-    { value: "25+", label: "Projects Shipped" },
-    { value: "3+", label: "Years Experience" },
-    { value: "10k+", label: "Lines of Code" },
-  ];
+  const heroDescription = data?.description || "";
+
+  const stats = propStats || [];
 
   useEffect(() => {
     const current = heroRoles[roleIndex];
@@ -45,13 +41,6 @@ export default function Hero({ data, stats: propStats }: { data: any; stats: any
       <div className={`bg-glow bg-glow-purple ${styles.glow1}`} />
       <div className={`bg-glow bg-glow-cyan ${styles.glow2}`} />
       <div className={`bg-glow bg-glow-pink ${styles.glow3}`} />
-
-      {/* Floating badges */}
-      <div className={`${styles.floatingBadge} ${styles.badge1}`}>⚛️ React</div>
-      <div className={`${styles.floatingBadge} ${styles.badge2}`}>🚀 Next.js</div>
-      <div className={`${styles.floatingBadge} ${styles.badge3}`}>🤖 AI/ML</div>
-      <div className={`${styles.floatingBadge} ${styles.badge4}`}>🎨 TypeScript</div>
-      <div className={`${styles.floatingBadge} ${styles.badge5}`}>⚡ Node.js</div>
 
       {/* Content */}
       <div className={`container ${styles.heroContent}`}>

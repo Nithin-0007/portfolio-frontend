@@ -11,7 +11,7 @@ const handleNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
 export default function Footer({ data, contact }: { data?: any; contact?: any }) {
   const year = new Date().getFullYear();
 
-  const tagline = data?.heroTagline || "Building with purpose, one line at a time.";
+  const tagline = data?.heroTagline || "";
   const copyright = data?.footerText || `© ${year} ${contact?.name || "Developer"}. All rights reserved.`;
   const links = data?.quickLinks || [
     { label: "Home", href: "#home" },

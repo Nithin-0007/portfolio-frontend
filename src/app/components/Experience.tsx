@@ -6,34 +6,16 @@ import styles from "./Experience.module.css";
 export default function Experience({ data, achievements }: { data: any[]; achievements: any[] }) {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  const initialExperiences = [
-    { role: "Senior Full-Stack Developer", company: "TechCorp Solutions", period: "2024 – Present", type: "EXPERIENCE", icon: "🏢", color: "#7c3aed", points: ["Led development of a multi-tenant SaaS platform serving 10,000+ users", "Architected microservices with Node.js, reducing API response time by 40%", "Built AI-powered features using LangChain and OpenAI APIs", "Mentored 4 junior developers and conducted weekly code reviews"] },
-    { role: "Frontend Developer", company: "Innovate Labs", period: "2022 – 2024", type: "EXPERIENCE", icon: "⚡", color: "#06b6d4", points: ["Developed 15+ responsive React applications with pixel-perfect UI", "Improved Core Web Vitals scores by 35% through performance optimization", "Integrated 20+ third-party APIs and payment gateways (Stripe, Razorpay)", "Collaborated closely with designers to implement complex animations"] },
-    { role: "Full-Stack Developer Intern", company: "StartupHub", period: "2022 – 2022", type: "EXPERIENCE", icon: "🚀", color: "#f59e0b", points: ["Built a real-time analytics dashboard using React and WebSockets", "Designed and implemented REST APIs with Node.js and MongoDB", "Contributed to open-source projects, gaining 200+ GitHub stars"] },
-  ];
-
-  const initialEducation = [
-    { degree: "B.Tech in Computer Science", school: "Anna University", period: "2019 – 2023", grade: "CGPA: 8.7 / 10", icon: "🎓", color: "#22c55e", type: "EDUCATION" },
-    { degree: "Full-Stack Web Development", school: "The Odin Project + freeCodeCamp", period: "2021 – 2022", grade: "Certifications Earned", icon: "📜", color: "#7c3aed", type: "EDUCATION" },
-  ];
-
-  const initialAchievements = [
-    { title: "200+ GitHub stars earned" },
-    { title: "Top 10% on LeetCode" },
-    { title: "Hackathon Winner 2023" },
-    { title: "AWS Certified Developer" },
-  ];
-
-  let displayExperiences = data?.length ? data.filter((e: any) => e.type === "EXPERIENCE") : initialExperiences;
-  let displayEducation = data?.length ? data.filter((e: any) => e.type === "EDUCATION").map((e: any) => ({
+  const displayExperiences = data?.length ? data.filter((e: any) => e.type === "EXPERIENCE") : [];
+  const displayEducation = data?.length ? data.filter((e: any) => e.type === "EDUCATION").map((e: any) => ({
     degree: e.role,
     school: e.company,
     period: e.period,
     grade: e.points?.[0] || "",
     icon: e.icon,
     color: e.color
-  })) : initialEducation;
-  let displayAchievements = achievements?.length ? achievements : initialAchievements;
+  })) : [];
+  const displayAchievements = achievements?.length ? achievements : [];
 
 
   useEffect(() => {

@@ -7,32 +7,12 @@ export default function Skills({ data }: { data: any }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const barsRef = useRef<HTMLDivElement>(null);
 
-  const initialCategories = [
-    { icon: "⚛️", title: "Frontend", color: "#7c3aed", skills: ["React", "Next.js", "TypeScript", "CSS/SCSS", "Tailwind", "Framer Motion"] },
-    { icon: "🔧", title: "Backend", color: "#06b6d4", skills: ["Node.js", "Express", "FastAPI", "Python", "REST APIs", "GraphQL"] },
-    { icon: "🗄️", title: "Database", color: "#f59e0b", skills: ["PostgreSQL", "MongoDB", "Redis", "Prisma", "Supabase", "Firebase"] },
-    { icon: "☁️", title: "DevOps & Cloud", color: "#ec4899", skills: ["Docker", "AWS", "Vercel", "GitHub Actions", "Linux", "Nginx"] },
-    { icon: "🤖", title: "AI / ML", color: "#22c55e", skills: ["LangChain", "OpenAI API", "Ollama", "Hugging Face", "Pinecone", "RAG"] },
-    { icon: "🛠️", title: "Tools", color: "#f97316", skills: ["Git/GitHub", "VS Code", "Figma", "Postman", "Jira", "Notion"] },
-  ];
-
-  const initialProficiencies = [
-    { label: "React / Next.js", value: 92 },
-    { label: "TypeScript / JavaScript", value: 90 },
-    { label: "Node.js / Express", value: 85 },
-    { label: "Python / FastAPI", value: 78 },
-    { label: "Database Design", value: 82 },
-    { label: "UI/UX Design", value: 75 },
-    { label: "DevOps / Cloud", value: 70 },
-    { label: "AI Integrations", value: 80 },
-  ];
-
-  let displayCategories = initialCategories;
-  let displayProficiencies = initialProficiencies;
+  let displayCategories: any[] = [];
+  let displayProficiencies: any[] = [];
 
   if (Array.isArray(data) && data.length > 0) {
     displayProficiencies = data.map((s: any) => ({ label: s.label, value: s.value }));
-    
+
     // Group skills by category
     const grouped = data.reduce((acc: any, s: any) => {
       const cat = s.category || "Other";
@@ -40,7 +20,7 @@ export default function Skills({ data }: { data: any }) {
       acc[cat].skills.push(s.label);
       return acc;
     }, {});
-    
+
     displayCategories = Object.values(grouped);
   }
 

@@ -6,17 +6,10 @@ import styles from "./About.module.css";
 export default function About({ data }: { data: any }) {
   const sectionRef = useRef<HTMLDivElement>(null);
 
-  const aboutHighlights = data?.highlights || ["Problem Solver", "Clean Code Advocate", "Team Player", "Lifelong Learner"];
-  const aboutBio1 = data?.bio1 || "Hey! I'm Nithish Kumar — a passionate full-stack developer with a love for building products that are both technically robust and beautifully designed.";
-  const aboutBio2 = data?.bio2 || "I specialize in the JavaScript ecosystem — React, Next.js, Node.js — and I'm always exploring new technologies like AI integrations, serverless architectures, and edge computing.";
-  const aboutAvailability = data?.availability || "Available for hire";
-
-  const stats = [
-    { value: 25, suffix: "+", label: "Projects Shipped" },
-    { value: 3, suffix: "+", label: "Years Experience" },
-    { value: 15, suffix: "+", label: "Technologies" },
-    { value: 100, suffix: "%", label: "Client Satisfaction" },
-  ];
+  const aboutHighlights = data?.highlights || [];
+  const aboutBio1 = data?.bio1 || "";
+  const aboutBio2 = data?.bio2 || "";
+  const aboutAvailability = data?.availability || "";
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -50,7 +43,7 @@ export default function About({ data }: { data: any }) {
                   {data?.profileImage ? (
                     <img src={data.profileImage} alt="Profile" className={styles.profileImg} />
                   ) : (
-                    <span>{data?.name?.split(" ").map((n: any) => n[0]).join("").substring(0, 2).toUpperCase() || "NR"}</span>
+                    <span>{data?.name?.split(" ").map((n: any) => n[0]).join("").substring(0, 2).toUpperCase() || ""}</span>
                   )}
                 </div>
                 <div className={styles.codeSnippet}>
@@ -125,16 +118,18 @@ export default function About({ data }: { data: any }) {
           </div>
         </div>
 
-        <div className={styles.statsGrid}>
-          {stats.map((stat, i) => (
-            <div key={`${stat.label}-${i}`} className={`glass-card ${styles.statCard} reveal`} style={{ transitionDelay: `${i * 0.1}s` }}>
-              <span className={`gradient-text ${styles.statValue}`}>
-                {stat.value}{stat.suffix}
-              </span>
-              <span className={styles.statLabel}>{stat.label}</span>
-            </div>
-          ))}
-        </div>
+        {data?.stats?.length > 0 && (
+          <div className={styles.statsGrid}>
+            {data.stats.map((stat: any, i: number) => (
+              <div key={`${stat.label}-${i}`} className={`glass-card ${styles.statCard} reveal`} style={{ transitionDelay: `${i * 0.1}s` }}>
+                <span className={`gradient-text ${styles.statValue}`}>
+                  {stat.value}{stat.suffix}
+                </span>
+                <span className={styles.statLabel}>{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
