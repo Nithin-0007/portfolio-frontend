@@ -202,8 +202,11 @@ export default function ContentManager() {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Experience Badge Text (e.g. 3+ Years Exp.)</label>
+            <label className={styles.label}>Experience Badge Text</label>
             <input className={styles.input} name="experienceTitle" value={aboutData.experienceTitle || ""} onChange={handleAboutChange} placeholder="e.g. 3+ Years Exp." />
+            <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4 }}>
+              Shown as a floating badge on the About section image (e.g. &quot;3+ Years Exp.&quot;)
+            </p>
           </div>
 
           <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--glass-border)' }}>

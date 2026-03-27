@@ -146,9 +146,34 @@ export default function SiteSettingsAdmin() {
       </div>
 
       <div className={styles.card} style={{ marginBottom: "2rem" }}>
-        <h2 className={styles.cardTitle}>Hero Statistics Grid</h2>
-        <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1rem" }}>Configure the 3 key metric cards displayed on the Hero Home page.</p>
-        
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+          <div>
+            <h2 className={styles.cardTitle} style={{ marginBottom: 4 }}>Hero Statistics Grid</h2>
+            <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: 0 }}>
+              The stat numbers shown at the bottom of your Hero section (e.g. &quot;25+ Projects Shipped&quot;).
+            </p>
+          </div>
+          {form.heroStats.length === 0 && (
+            <button
+              className={styles.btnSecondary}
+              style={{ fontSize: "0.78rem", padding: "6px 14px", flexShrink: 0 }}
+              onClick={() => setForm(f => f ? { ...f, heroStats: [
+                { value: "25+", label: "Projects Shipped" },
+                { value: "3+", label: "Years Experience" },
+                { value: "10k+", label: "Lines of Code" },
+              ]} : f)}
+            >
+              + Quick Add Defaults
+            </button>
+          )}
+        </div>
+
+        {form.heroStats.length === 0 && (
+          <div style={{ padding: "16px", background: "rgba(124,58,237,0.08)", border: "1px dashed rgba(124,58,237,0.3)", borderRadius: "10px", marginBottom: "16px", fontSize: "0.82rem", color: "#94a3b8" }}>
+            No stats yet. Click <strong>+ Add Statistic</strong> below or <strong>Quick Add Defaults</strong> to add example stats, then edit with your real numbers.
+          </div>
+        )}
+
         {form.heroStats.map((stat, i) => (
           <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 2fr auto", gap: 12, marginBottom: 16 }}>
             <div>
@@ -159,7 +184,7 @@ export default function SiteSettingsAdmin() {
               <label className={styles.label}>Stat Label</label>
               <input className={styles.input} value={stat.label} onChange={e => updateStat(i, 'label', e.target.value)} placeholder="e.g. Projects Shipped" />
             </div>
-            <button className={styles.btnDanger} style={{ height: "fit-content", marginTop: 26 }} onClick={() => removeStat(i)}>X</button>
+            <button className={styles.btnDanger} style={{ height: "fit-content", marginTop: 26 }} onClick={() => removeStat(i)}>✕</button>
           </div>
         ))}
         <button className={styles.btnSecondary} onClick={addStat}>+ Add Statistic</button>
