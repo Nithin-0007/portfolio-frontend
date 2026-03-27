@@ -1,5 +1,3 @@
-import { Resend } from "resend";
-
 type OtpPurpose = "login" | "register" | "forgot-password";
 
 const CONFIG: Record<OtpPurpose, { subject: string; heading: string; description: string; color: string }> = {
@@ -67,7 +65,7 @@ export async function sendOtpEmail(
   purpose: OtpPurpose = "login"
 ): Promise<void> {
   // Dev fallback — no API key configured
-  if (!process.env.RESEND_API_KEY) {
+  if (!process.env.BREVO_API_KEY) {
     console.log(`\n${"=".repeat(50)}`);
     console.log(`[DEV] OTP Email → ${to}`);
     console.log(`[DEV] Purpose  : ${purpose}`);
@@ -76,19 +74,29 @@ export async function sendOtpEmail(
     return;
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY.trim());
-  const from   = (process.env.RESEND_FROM || "PortfolioOS <onboarding@resend.dev>").trim();
   const { subject } = CONFIG[purpose];
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || "nithinsagar777@gmail.com").trim();
+  const senderName  = (process.env.BREVO_SENDER_NAME  || "PortfolioOS").trim();
+  const apiKey      = process.env.BREVO_API_KEY.trim();
 
-  const { error } = await resend.emails.send({
-    from,
-    to,
-    subject,
-    html: buildEmailHtml(code, purpose),
-    text: `Your ${purpose} OTP is: ${code}. It expires in 10 minutes. Do not share this code.`,
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "accept":       "application/json",
+      "api-key":      apiKey,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: { name: senderName, email: senderEmail },
+      to:     [{ email: to }],
+      subject,
+      htmlContent:  buildEmailHtml(code, purpose),
+      textContent:  `Your ${purpose} OTP: ${code}. It expires in 10 minutes. Do not share this code.`,
+    }),
   });
 
-  if (error) {
-    throw new Error(`Resend error: ${error.message}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Brevo send failed: ${JSON.stringify(err)}`);
   }
 }
