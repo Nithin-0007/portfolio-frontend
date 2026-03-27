@@ -184,6 +184,33 @@
 
 .cardTag { font-size: 0.7rem; padding: 3px 10px; }
 
+/* Clickable card */
+.clickable {
+  cursor: pointer;
+}
+
+/* "Open Project" hint that slides up on hover */
+.openHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+  position: relative;
+  z-index: 1;
+}
+
+.clickable:hover .openHint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* View More */
 .viewMore { text-align: center; }
 
