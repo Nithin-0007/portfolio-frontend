@@ -186,9 +186,19 @@ export default function SiteSettingsAdmin() {
       </div>
 
       <div className={styles.card} style={{ marginBottom: "2rem" }}>
-        <h2 className={styles.cardTitle}>Contact Section</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+          <h2 className={styles.cardTitle} style={{ marginBottom: 0 }}>Contact Section</h2>
+          <button
+            className={styles.btnSecondary}
+            style={{ fontSize: "0.78rem", padding: "6px 14px" }}
+            onClick={() => setForm(f => f ? { ...f, contactLocation: "", contactEmail: "", contactPhone: "", contactAvailability: "", contactSubtitle: "" } : f)}
+            title="Clear all contact override fields (portfolio will fall back to your account data)"
+          >
+            🗑 Clear All
+          </button>
+        </div>
         <p style={{ fontSize: "0.85rem", color: "#94a3b8", marginBottom: "1.5rem" }}>
-          Controls the Contact page info panel — subtitle text, location, email, phone, and availability badge.
+          Controls the Contact page info panel. Leave fields <strong>empty</strong> to automatically use data from &quot;Profile Content → Contact Information&quot;. Email always falls back to your account email.
         </p>
         <div className={styles.formGroup}>
           <label className={styles.label}>Contact Subtitle</label>

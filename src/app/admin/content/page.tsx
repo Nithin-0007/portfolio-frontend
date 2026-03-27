@@ -286,8 +286,30 @@ export default function ContentManager() {
 
         {/* CONTACT SECTION */}
         <div className={styles.card}>
-          <h2 className={styles.cardTitle}>Contact Information</h2>
-          
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <h2 className={styles.cardTitle} style={{ marginBottom: 0 }}>Contact Information</h2>
+            <button
+              className={styles.btnSecondary}
+              style={{ fontSize: "0.78rem", padding: "6px 14px" }}
+              onClick={() => {
+                if (session?.user) {
+                  const u = session.user as any;
+                  setAboutData(prev => ({
+                    ...prev,
+                    email: u.email || prev.email,
+                    phone: u.phone || prev.phone,
+                  }));
+                }
+              }}
+              title="Fill email and phone from your account registration data"
+            >
+              ↩ Use Account Data
+            </button>
+          </div>
+          <p style={{ fontSize: "0.78rem", color: "#64748b", marginBottom: "1rem" }}>
+            These details appear on the Contact section of your portfolio. Click &quot;Use Account Data&quot; to auto-fill from your registered email/phone.
+          </p>
+
           <div className={styles.formGroup}>
             <label className={styles.label}>Location</label>
             <input className={styles.input} name="location" value={aboutData.location || ""} onChange={handleAboutChange} placeholder="e.g., Chennai, India" />
