@@ -130,7 +130,7 @@ export default async function Home({ params }: { params: Promise<{ username: str
     <>
       <Navbar data={data.siteSettings} user={data.user} />
       <main>
-        <Hero data={data.hero} stats={data.siteSettings?.heroStats} />
+        <Hero data={data.hero} stats={data.siteSettings?.heroStats} skills={data.skills?.slice(0, 5)} />
         <About data={data.about} />
         <Skills data={data.skills} />
         <Projects data={data.projects} github={data.about?.github} />

@@ -33,10 +33,17 @@
   position: absolute;
   inset: -2px;
   border-radius: var(--radius-xl);
-  background: var(--gradient-primary);
+  background: conic-gradient(from 0deg at 50% 50%,
+    #7c3aed 0deg, #06b6d4 90deg, #ec4899 180deg, #7c3aed 360deg);
   z-index: 0;
-  opacity: 0.6;
+  opacity: 0.7;
   filter: blur(1px);
+  animation: rotate-img-border 6s linear infinite;
+}
+
+@keyframes rotate-img-border {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .imageInner {
@@ -194,7 +201,27 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
+
+.statCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 120%, rgba(124,58,237,0.2) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: rgba(124,58,237,0.4);
+  box-shadow: 0 12px 30px rgba(124,58,237,0.15);
+}
+
+.statCard:hover::before { opacity: 1; }
 
 .statValue {
   font-size: 2.2rem;

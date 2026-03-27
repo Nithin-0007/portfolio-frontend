@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
+import AnimatedCanvas from "@/app/components/AnimatedCanvas";
+import MouseGlow from "@/app/components/MouseGlow";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,7 +41,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${firaCode.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AnimatedCanvas />
+        <MouseGlow />
+        {children}
+      </body>
     </html>
   );
 }

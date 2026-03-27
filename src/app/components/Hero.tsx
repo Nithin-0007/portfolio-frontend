@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "./Hero.module.css";
 
-export default function Hero({ data, stats: propStats }: { data: any; stats: any }) {
+export default function Hero({ data, stats: propStats, skills }: { data: any; stats: any; skills?: any[] }) {
   const [roleIndex, setRoleIndex] = useState(0);
   const [displayed, setDisplayed] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -41,6 +41,24 @@ export default function Hero({ data, stats: propStats }: { data: any; stats: any
       <div className={`bg-glow bg-glow-purple ${styles.glow1}`} />
       <div className={`bg-glow bg-glow-cyan ${styles.glow2}`} />
       <div className={`bg-glow bg-glow-pink ${styles.glow3}`} />
+
+      {/* Animated rings */}
+      <div className={styles.ringWrapper} aria-hidden="true">
+        <div className={styles.ring1} />
+        <div className={styles.ring2} />
+        <div className={styles.ring3} />
+      </div>
+
+      {/* Dynamic floating skill badges */}
+      {skills && skills.slice(0, 5).map((skill, i) => (
+        <div
+          key={skill.id || skill.label}
+          className={`floating-badge ${styles[`badge${i + 1}` as keyof typeof styles]}`}
+          aria-hidden="true"
+        >
+          {skill.icon || "⚡"} {skill.label}
+        </div>
+      ))}
 
       {/* Content */}
       <div className={`container ${styles.heroContent}`}>
