@@ -149,7 +149,7 @@ export default async function Home({ params }: { params: Promise<{ username: str
         <Contact data={data.about} siteSettings={data.siteSettings} userId={data.user.id} user={data.user} />
       </main>
       <Footer data={data.siteSettings} contact={data.about} />
-      <ChatWidget />
+      <ChatWidget username={username} />
     </>
   );
 }

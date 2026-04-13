@@ -1,18 +1,16 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import styles from "./ChatWidget.module.css";
-import { graphqlClient } from "@/lib/graphql-client";
 
 interface Message { role: "user" | "assistant"; content: string; }
 
-export default function ChatWidget() {
+export default function ChatWidget({ username }: { username?: string }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Hi! 👋 I'm Nithish's AI assistant. Ask me anything about his skills, projects, or experience!" },
+    { role: "assistant", content: "Hi! 👋 I'm the AI assistant for this portfolio. Ask me about skills, projects, experience, or how to get in touch!" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,34 +26,28 @@ export default function ChatWidget() {
     const text = input.trim();
     if (!text || loading) return;
 
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    const userMsg: Message = { role: "user", content: text };
+    setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
-      const mutation = `
-        mutation ChatWithAI($message: String!, $sessionId: String!, $history: [ChatInputMessage]) {
-          chatWithAI(message: $message, sessionId: $sessionId, history: $history) {
-            content
-            role
-          }
-        }
-      `;
-
-      const data = await graphqlClient.query(mutation, { 
-        message: text, 
-        sessionId, 
-        history: messages.slice(-8).map(m => ({ role: m.role, content: m.content })) 
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          username,
+          history: messages.slice(-8).map((m) => ({ role: m.role, content: m.content })),
+        }),
       });
 
-      if (data?.chatWithAI) {
-        setMessages((m) => [...m, { role: "assistant", content: data.chatWithAI.content }]);
-        return;
-      }
-
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setMessages((m) => [...m, { role: "assistant", content: data.content || "Sorry, I couldn't respond." }]);
     } catch (error) {
       console.error("Chat error:", error);
-      setMessages((m) => [...m, { role: "assistant", content: "⚠️ Couldn't connect to AI. Please try again." }]);
+      setMessages((m) => [...m, { role: "assistant", content: "⚠️ Something went wrong. Please try again." }]);
     } finally {
       setLoading(false);
     }
@@ -84,10 +76,10 @@ export default function ChatWidget() {
           <div className={styles.chatHeader}>
             <div className={styles.headerAvatar}>🤖</div>
             <div>
-              <div className={styles.headerName}>NR AI Assistant</div>
+              <div className={styles.headerName}>AI Assistant</div>
               <div className={styles.headerStatus}>
                 <span className={styles.statusDot} />
-                Powered by Ollama
+                Online
               </div>
             </div>
             <button className={styles.closeBtn} onClick={() => setOpen(false)}>✕</button>
@@ -97,10 +89,10 @@ export default function ChatWidget() {
             {messages.map((msg, i) => (
               <div key={i} className={`${styles.msg} ${msg.role === "user" ? styles.msgUser : styles.msgBot}`}>
                 {msg.role === "assistant" && <span className={styles.msgAvatar}>🤖</span>}
-                <div className={styles.msgBubble}>{msg.content || <span className={styles.typing}>●●●</span>}</div>
+                <div className={styles.msgBubble}>{msg.content}</div>
               </div>
             ))}
-            {loading && messages[messages.length - 1]?.role === "user" && (
+            {loading && (
               <div className={`${styles.msg} ${styles.msgBot}`}>
                 <span className={styles.msgAvatar}>🤖</span>
                 <div className={styles.msgBubble}><span className={styles.typing}>●●●</span></div>
@@ -121,7 +113,10 @@ export default function ChatWidget() {
               id="chat-input"
             />
             <button className={styles.sendBtn} onClick={send} disabled={loading || !input.trim()} id="chat-send">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
             </button>
           </div>
         </div>

@@ -59,7 +59,6 @@ export default function Footer({ data, contact }: { data?: any; contact?: any })
         <div className="container">
           <div className={styles.bottomContent}>
             <span className={styles.copyright}>{copyright}</span>
-            <span className={styles.madeWith}>Made with ❤️ using Next.js & TypeScript</span>
           </div>
         </div>
       </div>
