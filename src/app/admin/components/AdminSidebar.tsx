@@ -20,6 +20,7 @@ const navGroups = [
       { href: "/admin/skills",       icon: "◎", label: "Skills" },
       { href: "/admin/experience",   icon: "◷", label: "Experience" },
       { href: "/admin/achievements", icon: "◆", label: "Achievements" },
+      { href: "/admin/resume",       icon: "📄", label: "Resume Builder" },
     ],
   },
   {
@@ -28,6 +29,12 @@ const navGroups = [
       { href: "/admin/events",        icon: "◉", label: "Events" },
       { href: "/admin/messages",      icon: "◈", label: "Messages" },
       { href: "/admin/notifications", icon: "◎", label: "Notifications" },
+    ],
+  },
+  {
+    label: "Appearance",
+    items: [
+      { href: "/admin/design", icon: "◉", label: "Design Studio" },
     ],
   },
   {

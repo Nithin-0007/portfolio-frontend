@@ -53,3 +53,5 @@ typescript-errors.txt
 
 # uploaded files (stored in Cloudinary in production)
 /public/uploads/
+
+.vercel

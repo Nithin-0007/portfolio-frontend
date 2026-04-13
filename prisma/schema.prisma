@@ -271,6 +271,21 @@ model SiteSettings {
   contactEmail    String   @default("admin@nithish.dev")
   contactPhone    String   @default("+91 98765 43210")
   contactAvailability String @default("Open to opportunities")
+
+  // Design Customizer
+  colorPrimary   String  @default("#7c3aed")
+  colorSecondary String  @default("#06b6d4")
+  colorPink      String  @default("#ec4899")
+  bgPrimary      String  @default("#050816")
+  bgSecondary    String  @default("#0d1117")
+  fontBody       String  @default("Inter")
+  animationLevel String  @default("normal")
+  borderRadius   String  @default("medium")
+  showSkills     Boolean @default(true)
+  showProjects   Boolean @default(true)
+  showExperience Boolean @default(true)
+  showEvents     Boolean @default(true)
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

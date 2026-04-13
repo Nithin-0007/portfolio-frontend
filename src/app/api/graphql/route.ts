@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendOtpEmail } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -241,6 +242,9 @@ async function saveSiteSettings(userId: string, input: any) {
   const data = sanitize(input, [
     "heroTagline", "footerText", "heroStats", "quickLinks",
     "contactSubtitle", "contactLocation", "contactEmail", "contactPhone", "contactAvailability",
+    "colorPrimary", "colorSecondary", "colorPink", "bgPrimary", "bgSecondary",
+    "fontBody", "animationLevel", "borderRadius",
+    "showSkills", "showProjects", "showExperience", "showEvents",
   ]);
   return prisma.siteSettings.upsert({ where: { userId }, update: data, create: { userId, ...data } });
 }

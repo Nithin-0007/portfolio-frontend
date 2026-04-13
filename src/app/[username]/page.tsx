@@ -11,6 +11,7 @@ import Events from "@/app/components/Events";
 import Contact from "@/app/components/Contact";
 import Footer from "@/app/components/Footer";
 import ChatWidget from "@/app/components/ChatWidget";
+import ThemeInjector from "@/app/components/ThemeInjector";
 import { graphqlClient } from "@/lib/graphql-client";
 import { prisma } from "@/lib/prisma";
 
@@ -126,16 +127,25 @@ export default async function Home({ params }: { params: Promise<{ username: str
 
   if (!data) notFound();
 
+  const design = data.siteSettings;
+  const show = {
+    skills:     design?.showSkills     !== false,
+    projects:   design?.showProjects   !== false,
+    experience: design?.showExperience !== false,
+    events:     design?.showEvents     !== false,
+  };
+
   return (
     <>
+      <ThemeInjector design={design} />
       <Navbar data={data.siteSettings} user={data.user} />
       <main>
         <Hero data={data.hero} stats={data.siteSettings?.heroStats} skills={data.skills?.slice(0, 5)} />
         <About data={data.about} />
-        <Skills data={data.skills} />
-        <Projects data={data.projects} github={data.about?.github} />
-        <Experience data={data.experiences} achievements={data.achievements} />
-        <Events data={data.events} />
+        {show.skills     && <Skills data={data.skills} />}
+        {show.projects   && <Projects data={data.projects} github={data.about?.github} />}
+        {show.experience && <Experience data={data.experiences} achievements={data.achievements} />}
+        {show.events     && <Events data={data.events} />}
         <Contact data={data.about} siteSettings={data.siteSettings} userId={data.user.id} user={data.user} />
       </main>
       <Footer data={data.siteSettings} contact={data.about} />

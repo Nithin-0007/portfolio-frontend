@@ -6,17 +6,20 @@ import { useRouter } from "next/navigation";
 import styles from "./login.module.css";
 
 type Mode = "login" | "signup" | "forgot";
+type LoginTab = "password" | "otp";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode]       = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState("");
+  const [error, setError]     = useState("");
 
   // ── Login state ──────────────────────────────────────────────────────────
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginOtp,   setLoginOtp]   = useState("");
-  const [loginStep,  setLoginStep]  = useState<1 | 2>(1);
+  const [loginTab,     setLoginTab]     = useState<LoginTab>("password");
+  const [loginEmail,   setLoginEmail]   = useState("");
+  const [loginPassword,setLoginPassword]= useState("");
+  const [loginOtp,     setLoginOtp]     = useState("");
+  const [loginStep,    setLoginStep]    = useState<1 | 2>(1);
 
   // ── Signup state ─────────────────────────────────────────────────────────
   const [signupName,     setSignupName]     = useState("");
@@ -27,20 +30,19 @@ export default function AdminLogin() {
   const [signupStep,     setSignupStep]     = useState<1 | 2>(1);
 
   // ── Forgot password state ─────────────────────────────────────────────────
-  const [fpEmail,    setFpEmail]    = useState("");
-  const [fpOtp,      setFpOtp]      = useState("");
-  const [fpPassword, setFpPassword] = useState("");
-  const [fpConfirm,  setFpConfirm]  = useState("");
-  const [fpStep,     setFpStep]     = useState<1 | 2>(1);
-  const [fpSuccess,  setFpSuccess]  = useState(false);
+  const [fpEmail,   setFpEmail]   = useState("");
+  const [fpOtp,     setFpOtp]     = useState("");
+  const [fpPassword,setFpPassword]= useState("");
+  const [fpConfirm, setFpConfirm] = useState("");
+  const [fpStep,    setFpStep]    = useState<1 | 2>(1);
+  const [fpSuccess, setFpSuccess] = useState(false);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function reset(to: Mode) {
-    setError("");
-    setLoading(false);
-    setLoginStep(1);  setLoginEmail("");  setLoginOtp("");
+    setError(""); setLoading(false);
+    setLoginTab("password"); setLoginStep(1); setLoginEmail(""); setLoginPassword(""); setLoginOtp("");
     setSignupStep(1); setSignupName(""); setSignupUsername(""); setSignupEmail(""); setSignupPassword(""); setSignupOtp("");
-    setFpStep(1);     setFpEmail(""); setFpOtp(""); setFpPassword(""); setFpConfirm(""); setFpSuccess(false);
+    setFpStep(1); setFpEmail(""); setFpOtp(""); setFpPassword(""); setFpConfirm(""); setFpSuccess(false);
     setMode(to);
   }
 
@@ -50,8 +52,36 @@ export default function AdminLogin() {
     return { ok: res.ok, data };
   }
 
+  async function redirectAfterLogin() {
+    router.push("/admin");
+    router.refresh();
+  }
+
   // ════════════════════════════════════════════════════════════════════════
-  // LOGIN HANDLERS
+  // LOGIN — PASSWORD
+  // ════════════════════════════════════════════════════════════════════════
+
+  async function handleLoginPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    try {
+      const result = await signIn("credentials", {
+        identifier: loginEmail,
+        password:   loginPassword,
+        loginType:  "password",
+        redirect:   false,
+      });
+      if (result?.error) {
+        setError("Invalid email or password. Please try again.");
+      } else {
+        await redirectAfterLogin();
+      }
+    } catch { setError("Something went wrong. Please try again."); }
+    finally { setLoading(false); }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LOGIN — OTP
   // ════════════════════════════════════════════════════════════════════════
 
   async function handleLoginSendOtp(e: React.FormEvent) {
@@ -79,8 +109,7 @@ export default function AdminLogin() {
       if (result?.error) {
         setError("Invalid or expired OTP. Please try again.");
       } else {
-        router.push("/admin");
-        router.refresh();
+        await redirectAfterLogin();
       }
     } catch { setError("Something went wrong. Please try again."); }
     finally { setLoading(false); }
@@ -120,19 +149,16 @@ export default function AdminLogin() {
         identifier: signupEmail, password: signupPassword, otpCode: signupOtp,
       });
       if (!ok) { setError(data.error || "Registration failed"); return; }
-
-      // Auto sign-in after registration
       const result = await signIn("credentials", {
         identifier: signupEmail, password: signupPassword,
         loginType: "password", redirect: false,
       });
       if (result?.error) {
-        setError("Account created! Please sign in using OTP.");
+        setError("Account created! Please sign in.");
         reset("login");
         setLoginEmail(signupEmail);
       } else {
-        router.push("/admin");
-        router.refresh();
+        await redirectAfterLogin();
       }
     } catch { setError("Network error. Please try again."); }
     finally { setLoading(false); }
@@ -155,9 +181,9 @@ export default function AdminLogin() {
 
   async function handleFpReset(e: React.FormEvent) {
     e.preventDefault();
-    if (fpOtp.length !== 6)         { setError("Enter the 6-digit OTP code"); return; }
-    if (fpPassword !== fpConfirm)    { setError("Passwords do not match"); return; }
-    if (fpPassword.length < 6)       { setError("Password must be at least 6 characters"); return; }
+    if (fpOtp.length !== 6)       { setError("Enter the 6-digit OTP code"); return; }
+    if (fpPassword !== fpConfirm)  { setError("Passwords do not match"); return; }
+    if (fpPassword.length < 6)     { setError("Password must be at least 6 characters"); return; }
     setError(""); setLoading(true);
     try {
       const { ok, data } = await post("/api/auth/otp", {
@@ -177,10 +203,7 @@ export default function AdminLogin() {
     return (
       <div className={styles.steps}>
         {Array.from({ length: total }, (_, i) => (
-          <div
-            key={i}
-            className={`${styles.stepDot} ${i + 1 === active ? styles.active : ""} ${i + 1 < active ? styles.done : ""}`}
-          />
+          <div key={i} className={`${styles.stepDot} ${i + 1 === active ? styles.active : ""} ${i + 1 < active ? styles.done : ""}`} />
         ))}
       </div>
     );
@@ -203,11 +226,6 @@ export default function AdminLogin() {
     signup: "Create Account",
     forgot: "Reset Password",
   };
-  const subtitles: Record<Mode, string> = {
-    login:  loginStep === 1 ? "Enter your email to receive a sign-in OTP" : "Enter the OTP sent to your email",
-    signup: signupStep === 1 ? "Fill in your details to get started" : "Enter the OTP sent to your email",
-    forgot: fpStep === 1 ? "Enter your email to receive a reset OTP" : `OTP sent to ${fpEmail}`,
-  };
 
   return (
     <div className={styles.page}>
@@ -222,18 +240,54 @@ export default function AdminLogin() {
             <span className={styles.logoText}>PortfolioOS</span>
           </div>
           <h1 className={styles.title}>{titles[mode]}</h1>
-          <p className={styles.subtitle}>{subtitles[mode]}</p>
+          {mode === "login" && (
+            <p className={styles.subtitle}>
+              {loginTab === "password"
+                ? "Sign in with your email and password"
+                : loginStep === 1
+                  ? "Enter your email to receive a sign-in OTP"
+                  : "Enter the OTP sent to your email"}
+            </p>
+          )}
+          {mode === "signup" && (
+            <p className={styles.subtitle}>
+              {signupStep === 1 ? "Fill in your details to get started" : "Enter the OTP sent to your email"}
+            </p>
+          )}
+          {mode === "forgot" && (
+            <p className={styles.subtitle}>
+              {fpStep === 1 ? "Enter your email to receive a reset OTP" : `OTP sent to ${fpEmail}`}
+            </p>
+          )}
         </div>
 
         {/* Error banner */}
         {error && <div className={styles.errorBanner}>⚠️ {error}</div>}
 
-        {/* ── LOGIN ─────────────────────────────────────────────────── */}
+        {/* ── LOGIN ─────────────────────────────────────────────── */}
         {mode === "login" && (
           <>
-            {loginStep === 1 ? (
-              <form onSubmit={handleLoginSendOtp} className={styles.form}>
-                <StepDots total={2} active={1} />
+            {/* Tab switcher */}
+            <div className={styles.tabRow}>
+              <button
+                type="button"
+                className={`${styles.tab} ${loginTab === "password" ? styles.tabActive : ""}`}
+                onClick={() => { setLoginTab("password"); setError(""); setLoginStep(1); setLoginOtp(""); }}
+              >
+                🔑 Password
+              </button>
+              <button
+                type="button"
+                className={`${styles.tab} ${loginTab === "otp" ? styles.tabActive : ""}`}
+                onClick={() => { setLoginTab("otp"); setError(""); setLoginStep(1); setLoginOtp(""); }}
+              >
+                📧 Email OTP
+              </button>
+            </div>
+
+            {/* Password login */}
+            {loginTab === "password" && (
+              <form onSubmit={handleLoginPassword} className={styles.form}>
                 <div className={styles.field}>
                   <label className={styles.label}>Email Address</label>
                   <input
@@ -244,44 +298,81 @@ export default function AdminLogin() {
                     required autoFocus
                   />
                 </div>
-                <button type="submit" className={styles.submitBtn} disabled={loading}>
-                  {loading ? <><span className={styles.spinner} /> Sending OTP…</> : "Send OTP →"}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleLoginVerifyOtp} className={styles.form}>
-                <StepDots total={2} active={2} />
-                <OtpHint email={loginEmail} />
                 <div className={styles.field}>
-                  <label className={styles.label}>6-Digit OTP Code</label>
+                  <label className={styles.label}>Password</label>
                   <input
-                    type="text" inputMode="numeric" className={styles.otpInput}
-                    placeholder="— — — — — —"
-                    value={loginOtp}
-                    onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    maxLength={6} required autoFocus
+                    type="password" className={styles.input}
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    required
                   />
                 </div>
-                <button type="submit" className={styles.submitBtn} disabled={loading || loginOtp.length !== 6}>
-                  {loading ? <><span className={styles.spinner} /> Verifying…</> : "Verify & Sign In →"}
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                  {loading ? <><span className={styles.spinner} /> Signing in…</> : "Sign In →"}
                 </button>
-                <div className={styles.helperRow}>
-                  <button type="button" className={styles.linkBtn} onClick={handleResendLoginOtp} disabled={loading}>
-                    Resend OTP
-                  </button>
-                  <span>·</span>
-                  <button type="button" className={styles.linkBtnMuted} onClick={() => { setLoginStep(1); setLoginOtp(""); setError(""); }}>
-                    Change email
+                <div style={{ textAlign: "center", marginTop: 4 }}>
+                  <button type="button" className={styles.linkBtn}
+                    onClick={() => { reset("forgot"); setFpEmail(loginEmail); }}>
+                    Forgot password?
                   </button>
                 </div>
               </form>
             )}
 
-            <div style={{ textAlign: "center", marginTop: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-              <button type="button" className={styles.linkBtn}
-                onClick={() => { reset("forgot"); setFpEmail(loginEmail); }}>
-                Forgot password?
-              </button>
+            {/* OTP login */}
+            {loginTab === "otp" && (
+              <>
+                {loginStep === 1 ? (
+                  <form onSubmit={handleLoginSendOtp} className={styles.form}>
+                    <StepDots total={2} active={1} />
+                    <div className={styles.field}>
+                      <label className={styles.label}>Email Address</label>
+                      <input
+                        type="email" className={styles.input}
+                        placeholder="you@example.com"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        required autoFocus
+                      />
+                    </div>
+                    <button type="submit" className={styles.submitBtn} disabled={loading}>
+                      {loading ? <><span className={styles.spinner} /> Sending OTP…</> : "Send OTP →"}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLoginVerifyOtp} className={styles.form}>
+                    <StepDots total={2} active={2} />
+                    <OtpHint email={loginEmail} />
+                    <div className={styles.field}>
+                      <label className={styles.label}>6-Digit OTP Code</label>
+                      <input
+                        type="text" inputMode="numeric" className={styles.otpInput}
+                        placeholder="— — — — — —"
+                        value={loginOtp}
+                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        maxLength={6} required autoFocus
+                      />
+                    </div>
+                    <button type="submit" className={styles.submitBtn} disabled={loading || loginOtp.length !== 6}>
+                      {loading ? <><span className={styles.spinner} /> Verifying…</> : "Verify & Sign In →"}
+                    </button>
+                    <div className={styles.helperRow}>
+                      <button type="button" className={styles.linkBtn} onClick={handleResendLoginOtp} disabled={loading}>
+                        Resend OTP
+                      </button>
+                      <span>·</span>
+                      <button type="button" className={styles.linkBtnMuted}
+                        onClick={() => { setLoginStep(1); setLoginOtp(""); setError(""); }}>
+                        Change email
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+
+            <div style={{ textAlign: "center", marginTop: 20 }}>
               <button type="button" className={styles.outlineBtn} onClick={() => reset("signup")}>
                 Don't have an account? Sign up
               </button>
@@ -289,7 +380,7 @@ export default function AdminLogin() {
           </>
         )}
 
-        {/* ── SIGNUP ────────────────────────────────────────────────── */}
+        {/* ── SIGNUP ────────────────────────────────────────────── */}
         {mode === "signup" && (
           <>
             {signupStep === 1 ? (
@@ -367,7 +458,7 @@ export default function AdminLogin() {
           </>
         )}
 
-        {/* ── FORGOT PASSWORD ───────────────────────────────────────── */}
+        {/* ── FORGOT PASSWORD ───────────────────────────────────── */}
         {mode === "forgot" && (
           <>
             {fpSuccess ? (

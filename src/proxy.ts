@@ -14,7 +14,7 @@ export default auth((req) => {
   }
 
   // Block users with no role (shouldn't happen, but guard anyway)
-  if (isAdminRoute && !isLoginPage && isLoggedIn && userRole !== "ADMIN" && userRole !== "VIEWER") {
+  if (isAdminRoute && !isLoginPage && isLoggedIn && userRole !== "ADMIN" && userRole !== "MEMBER" && userRole !== "VIEWER") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
